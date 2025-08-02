@@ -1,0 +1,104 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}OnlyFlooze - Maîtrisez vos finances personnelles{% endblock %}
+
+{% block body %}
+<!-- Hero Section -->
+<section class="bg-primary text-white py-5">
+    <div class="container text-center">
+        <div class="row">
+            <div class="col-lg-8 mx-auto">
+                <h1 class="display-4 fw-bold mb-4">💰 Maîtrisez vos finances avec OnlyFlooze</h1>
+                <p class="lead mb-4">L'application de gestion financière personnelle qui vous aide à prendre le contrôle de votre argent, suivre vos dépenses et atteindre vos objectifs financiers.</p>
+                {% if not app.user %}
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-center">
+                        <a href="{{ path('app_register') }}" class="btn btn-light btn-lg px-4 me-md-2">Commencer gratuitement</a>
+                        <a href="{{ path('app_login') }}" class="btn btn-outline-light btn-lg px-4">Se connecter</a>
+                    </div>
+                {% else %}
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-center">
+                        <a href="#" class="btn btn-light btn-lg px-4">Accéder au tableau de bord</a>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Features Section -->
+<section class="py-5">
+    <div class="container">
+        <div class="row text-center">
+            <div class="col-lg-4 mb-4">
+                <div class="card h-100 shadow-sm">
+                    <div class="card-body">
+                        <div class="text-primary mb-3">📊</div>
+                        <h5 class="card-title">Suivi des dépenses</h5>
+                        <p class="card-text">Catégorisez et suivez automatiquement toutes vos dépenses pour comprendre où va votre argent.</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-4 mb-4">
+                <div class="card h-100 shadow-sm">
+                    <div class="card-body">
+                        <div class="text-primary mb-3">🎯</div>
+                        <h5 class="card-title">Objectifs financiers</h5>
+                        <p class="card-text">Définissez et atteignez vos objectifs d'épargne avec des outils de planification intelligents.</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-4 mb-4">
+                <div class="card h-100 shadow-sm">
+                    <div class="card-body">
+                        <div class="text-primary mb-3">📈</div>
+                        <h5 class="card-title">Analyses détaillées</h5>
+                        <p class="card-text">Visualisez vos finances avec des graphiques et rapports personnalisés pour prendre de meilleures décisions.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Benefits Section -->
+<section class="bg-light py-5">
+    <div class="container">
+        <div class="row align-items-center">
+            <div class="col-lg-6">
+                <h2 class="mb-4">Pourquoi choisir OnlyFlooze ?</h2>
+                <ul class="list-unstyled">
+                    <li class="mb-3">
+                        <i class="text-success">✓</i> <strong>Simplicité d'utilisation</strong> - Interface intuitive et accessible
+                    </li>
+                    <li class="mb-3">
+                        <i class="text-success">✓</i> <strong>Sécurité garantie</strong> - Vos données financières protégées
+                    </li>
+                    <li class="mb-3">
+                        <i class="text-success">✓</i> <strong>Totalement gratuit</strong> - Aucun frais caché
+                    </li>
+                    <li class="mb-3">
+                        <i class="text-success">✓</i> <strong>Accessible partout</strong> - Sur tous vos appareils
+                    </li>
+                </ul>
+            </div>
+            <div class="col-lg-6 text-center">
+                <div class="bg-white p-4 rounded shadow">
+                    <h3 class="text-primary">Rejoignez des milliers d'utilisateurs</h3>
+                    <p class="mb-0">qui ont déjà repris le contrôle de leurs finances</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- CTA Section -->
+{% if not app.user %}
+<section class="bg-primary text-white py-5">
+    <div class="container text-center">
+        <h2 class="mb-4">Prêt à transformer votre relation à l'argent ?</h2>
+        <p class="lead mb-4">Rejoignez OnlyFlooze dès aujourd'hui et commencez votre voyage vers la liberté financière.</p>
+        <a href="{{ path('app_register') }}" class="btn btn-light btn-lg px-5">Créer mon compte gratuitement</a>
+    </div>
+</section>
+{% endif %}
+{% endblock %}

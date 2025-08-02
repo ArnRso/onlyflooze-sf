@@ -1,0 +1,64 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Inscription - OnlyFlooze{% endblock %}
+
+{% block body %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-md-6 col-lg-5">
+            <div class="card shadow">
+                <div class="card-body p-5">
+                    <div class="text-center mb-4">
+                        <h1 class="h3 mb-3 fw-bold text-primary">💰 Rejoignez OnlyFlooze</h1>
+                        <p class="text-muted">Créez votre compte gratuit pour commencer à gérer vos finances</p>
+                    </div>
+
+                    {{ form_start(registrationForm, {'attr': {'class': 'needs-validation', 'novalidate': 'novalidate'}}) }}
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                {{ form_row(registrationForm.firstName, {
+                                    'attr': {'class': 'form-control form-control-lg'},
+                                    'row_attr': {'class': 'mb-3'}
+                                }) }}
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                {{ form_row(registrationForm.lastName, {
+                                    'attr': {'class': 'form-control form-control-lg'},
+                                    'row_attr': {'class': 'mb-3'}
+                                }) }}
+                            </div>
+                        </div>
+
+                        {{ form_row(registrationForm.email, {
+                            'attr': {'class': 'form-control form-control-lg'},
+                            'row_attr': {'class': 'mb-3'}
+                        }) }}
+
+                        {{ form_row(registrationForm.plainPassword, {
+                            'attr': {'class': 'form-control form-control-lg'},
+                            'row_attr': {'class': 'mb-3'}
+                        }) }}
+
+                        <div class="form-check mb-4">
+                            {{ form_widget(registrationForm.agreeTerms, {
+                                'attr': {'class': 'form-check-input'}
+                            }) }}
+                            {{ form_label(registrationForm.agreeTerms, null, {
+                                'label_attr': {'class': 'form-check-label small'}
+                            }) }}
+                        </div>
+
+                        <div class="d-grid mb-3">
+                            <button type="submit" class="btn btn-primary btn-lg">Créer mon compte</button>
+                        </div>
+                    {{ form_end(registrationForm) }}
+
+                    <div class="text-center">
+                        <p class="text-muted">Déjà un compte ? <a href="{{ path('app_login') }}" class="text-decoration-none">Se connecter</a></p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
