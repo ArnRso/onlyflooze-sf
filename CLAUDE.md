@@ -26,17 +26,30 @@ This is a **Symfony 7.3** web application with authentication features, using Po
 
 ## Architecture & Key Components
 
+### Architecture Philosophy
+**IMPORTANT**: This application follows a **service-oriented architecture** where:
+- **Controllers must be kept as lightweight as possible** - they should only handle HTTP concerns (request/response)
+- **All business logic must be placed in dedicated services** in the `src/Service/` directory
+- Controllers should only: validate input, call services, and return responses
+- Services should be injected via dependency injection and contain all domain logic
+
 ### Authentication System
 - **User Entity**: `src/Entity/User.php` - Implements UserInterface and PasswordAuthenticatedUserInterface
 - **User Repository**: `src/Repository/UserRepository.php` - Doctrine repository for User entity
 - **Security Config**: `config/packages/security.yaml` - Form login with CSRF protection enabled
 
 ### Controllers
-- **RegistrationController**: Handles user registration with automatic login after signup
-- **SecurityController**: Manages login/logout routes (login logic handled by Symfony Security)
+- **HomeController**: Landing page controller
+- **RegistrationController**: Handles user registration HTTP requests (business logic delegated to services)
+- **SecurityController**: Manages login/logout HTTP routes (authentication logic handled by Symfony Security)
+
+### Services
+- **All business logic resides in `src/Service/` directory**
+- Services handle domain operations, calculations, data processing, and complex workflows
+- Controllers should inject and use these services rather than implementing logic directly
 
 ### Forms
-- **RegistrationFormType**: User registration form with email, password, and terms agreement
+- **RegistrationFormType**: User registration form with firstName, lastName, email, password, and terms agreement
 
 ### Database
 - Uses **PostgreSQL** via Docker Compose
@@ -62,3 +75,5 @@ This is a **Symfony 7.3** web application with authentication features, using Po
 - **CSRF protection** enabled on forms and login
 - **Password hashing** handled automatically by Symfony
 - **User identifier**: email address
+- **Service-first approach**: Always create services for business logic before implementing in controllers
+- **Bootstrap 5.3.7** for frontend styling (no Stimulus/Turbo dependencies)
