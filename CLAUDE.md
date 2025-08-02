@@ -77,3 +77,12 @@ This is a **Symfony 7.3** web application with authentication features, using Po
 - **User identifier**: email address
 - **Service-first approach**: Always create services for business logic before implementing in controllers
 - **Bootstrap 5.3.7** for frontend styling (no Stimulus/Turbo dependencies)
+
+## Security & Authorization
+
+### Voter Guidelines
+- N'hésite pas a créer des voteurs quand on veut vérifier si un utilisateur peut réaliser une opération. D'ailleurs, quand on fera un isGranted, on mettra en paramètre le FQCN de la constante du voter
+
+## Formatting and Display Guidelines
+
+- Sur tous les endroits où on affiche des prix (avec number format par exemple), on utilise jamais d'espaces normaux mais des espaces insécables

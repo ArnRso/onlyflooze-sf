@@ -1,0 +1,132 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}{{ transaction.label }} - OnlyFlooze{% endblock %}
+
+{% block body %}
+    <div class="container py-4">
+        <div class="row justify-content-center">
+            <div class="col-md-8 col-lg-6">
+                <div class="card shadow">
+                    <div class="card-header bg-info text-white">
+                        <h4 class="mb-0">👁️ Détails de la Transaction</h4>
+                    </div>
+                    <div class="card-body">
+                        <div class="row mb-3">
+                            <div class="col-sm-4">
+                                <strong>Libellé :</strong>
+                            </div>
+                            <div class="col-sm-8">
+                                {{ transaction.label }}
+                            </div>
+                        </div>
+
+                        <div class="row mb-3">
+                            <div class="col-sm-4">
+                                <strong>Date :</strong>
+                            </div>
+                            <div class="col-sm-8">
+                                {{ transaction.transactionDate|date('d/m/Y') }}
+                            </div>
+                        </div>
+
+                        <div class="row mb-3">
+                            <div class="col-sm-4">
+                                <strong>Montant :</strong>
+                            </div>
+                            <div class="col-sm-8">
+                            <span
+                                class="fs-5 fw-bold {% if transaction.amountAsFloat >= 0 %}text-success{% else %}text-danger{% endif %}">
+                                {{ transaction.amount|number_format(2, ',', ' ') }}&nbsp;€
+                            </span>
+                            </div>
+                        </div>
+
+                        {% if transaction.info %}
+                            <div class="row mb-3">
+                                <div class="col-sm-4">
+                                    <strong>Informations :</strong>
+                                </div>
+                                <div class="col-sm-8">
+                                    <div class="border rounded p-2 bg-light">
+                                        {{ transaction.info|nl2br }}
+                                    </div>
+                                </div>
+                            </div>
+                        {% endif %}
+
+                        <div class="row mb-3">
+                            <div class="col-sm-4">
+                                <strong>Créée le :</strong>
+                            </div>
+                            <div class="col-sm-8">
+                                <small class="text-muted">
+                                    {{ transaction.createdAt|date('d/m/Y à H:i') }}
+                                </small>
+                            </div>
+                        </div>
+
+                        {% if transaction.updatedAt != transaction.createdAt %}
+                            <div class="row mb-3">
+                                <div class="col-sm-4">
+                                    <strong>Modifiée le :</strong>
+                                </div>
+                                <div class="col-sm-8">
+                                    <small class="text-muted">
+                                        {{ transaction.updatedAt|date('d/m/Y à H:i') }}
+                                    </small>
+                                </div>
+                            </div>
+                        {% endif %}
+
+                        <hr>
+
+                        <div class="d-grid gap-2 d-md-flex justify-content-md-between">
+                            <a href="{{ path('app_transaction_index') }}" class="btn btn-secondary">
+                                <i class="fas fa-arrow-left"></i> Retour à la liste
+                            </a>
+                            <div>
+                                <a href="{{ path('app_transaction_edit', {'id': transaction.id}) }}"
+                                   class="btn btn-warning me-2">
+                                    <i class="fas fa-edit"></i> Modifier
+                                </a>
+                                <button type="button" class="btn btn-danger" data-bs-toggle="modal"
+                                        data-bs-target="#deleteModal">
+                                    <i class="fas fa-trash"></i> Supprimer
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de suppression -->
+    <div class="modal fade" id="deleteModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Confirmer la suppression</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Êtes-vous sûr de vouloir supprimer cette transaction ?</p>
+                    <div class="alert alert-warning">
+                        <strong>{{ transaction.label }}</strong><br>
+                        <strong>{{ transaction.amount|number_format(2, ',', ' ') }}&nbsp;€</strong><br>
+                        <small>{{ transaction.transactionDate|date('d/m/Y') }}</small>
+                    </div>
+                    <p class="text-danger"><strong>Cette action est irréversible.</strong></p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                    <form method="post" action="{{ path('app_transaction_delete', {'id': transaction.id}) }}"
+                          style="display: inline;">
+                        <input type="hidden" name="_token" value="{{ csrf_token('delete' ~ transaction.id) }}">
+                        <button type="submit" class="btn btn-danger">Supprimer définitivement</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}

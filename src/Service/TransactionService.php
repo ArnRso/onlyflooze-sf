@@ -1,0 +1,119 @@
+<?php
+
+namespace App\Service;
+
+use App\Entity\Transaction;
+use App\Entity\User;
+use App\Repository\TransactionRepository;
+use Doctrine\ORM\EntityManagerInterface;
+use DateTimeImmutable;
+
+readonly class TransactionService
+{
+    public function __construct(
+        private EntityManagerInterface $entityManager,
+        private TransactionRepository  $transactionRepository
+    )
+    {
+    }
+
+    public function createTransaction(Transaction $transaction, User $user): Transaction
+    {
+        $transaction->setUser($user);
+
+        $this->entityManager->persist($transaction);
+        $this->entityManager->flush();
+
+        return $transaction;
+    }
+
+    public function updateTransaction(Transaction $transaction): Transaction
+    {
+        $this->entityManager->flush();
+
+        return $transaction;
+    }
+
+    public function deleteTransaction(Transaction $transaction): void
+    {
+        $this->entityManager->remove($transaction);
+        $this->entityManager->flush();
+    }
+
+    /**
+     * @return Transaction[]
+     */
+    public function getUserTransactionsByDateRange(User $user, DateTimeImmutable $startDate, DateTimeImmutable $endDate): array
+    {
+        return $this->transactionRepository->findByUserAndDateRange($user, $startDate, $endDate);
+    }
+
+    public function getUserTransactionStats(User $user): array
+    {
+        $transactions = $this->getUserTransactions($user);
+        $total = $this->getUserTransactionTotal($user);
+        $count = $this->getUserTransactionCount($user);
+
+        $positiveTotal = 0;
+        $negativeTotal = 0;
+        $positiveCount = 0;
+        $negativeCount = 0;
+
+        foreach ($transactions as $transaction) {
+            $amount = $transaction->getAmountAsFloat();
+            if ($amount >= 0) {
+                $positiveTotal += $amount;
+                $positiveCount++;
+            } else {
+                $negativeTotal += $amount;
+                $negativeCount++;
+            }
+        }
+
+        return [
+            'total' => $total,
+            'count' => $count,
+            'positive_total' => $positiveTotal,
+            'negative_total' => $negativeTotal,
+            'positive_count' => $positiveCount,
+            'negative_count' => $negativeCount,
+            'average' => $count > 0 ? $total / $count : 0,
+        ];
+    }
+
+    /**
+     * @return Transaction[]
+     */
+    public function getUserTransactions(User $user): array
+    {
+        return $this->transactionRepository->findByUser($user);
+    }
+
+    public function getUserTransactionTotal(User $user): float
+    {
+        return $this->transactionRepository->getTotalByUser($user);
+    }
+
+    public function getUserTransactionCount(User $user): int
+    {
+        return $this->transactionRepository->getCountByUser($user);
+    }
+
+    /**
+     * @return Transaction[]
+     */
+    public function getRecentTransactions(User $user, int $limit = 5): array
+    {
+        return $this->entityManager->createQueryBuilder()
+            ->select('t')
+            ->from(Transaction::class, 't')
+            ->where('t.user = :user')
+            ->setParameter('user', $user)
+            ->orderBy('t.transactionDate', 'DESC')
+            ->addOrderBy('t.createdAt', 'DESC')
+            ->setMaxResults($limit)
+            ->getQuery()
+            ->getResult();
+    }
+
+}
