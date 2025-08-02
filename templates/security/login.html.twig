@@ -1,0 +1,55 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Connexion - OnlyFlooze{% endblock %}
+
+{% block body %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-md-6 col-lg-4">
+            <div class="card shadow">
+                <div class="card-body p-5">
+                    <div class="text-center mb-4">
+                        <h1 class="h3 mb-3 fw-bold text-primary">💰 Connexion</h1>
+                        <p class="text-muted">Accédez à votre tableau de bord OnlyFlooze</p>
+                    </div>
+
+                    {% if error %}
+                        <div class="alert alert-danger">{{ error.messageKey|trans(error.messageData, 'security') }}</div>
+                    {% endif %}
+
+                    {% if app.user %}
+                        <div class="alert alert-info">
+                            Vous êtes connecté(e) en tant que {{ app.user.fullName }}, 
+                            <a href="{{ path('app_logout') }}" class="text-decoration-none">Se déconnecter</a>
+                        </div>
+                    {% endif %}
+
+                    <form method="post">
+                        <div class="mb-3">
+                            <label for="username" class="form-label">Email</label>
+                            <input type="email" value="{{ last_username }}" name="_username" id="username" 
+                                   class="form-control form-control-lg" autocomplete="email" required autofocus>
+                        </div>
+
+                        <div class="mb-4">
+                            <label for="password" class="form-label">Mot de passe</label>
+                            <input type="password" name="_password" id="password" 
+                                   class="form-control form-control-lg" autocomplete="current-password" required>
+                        </div>
+
+                        <input type="hidden" name="_csrf_token" value="{{ csrf_token('authenticate') }}">
+
+                        <div class="d-grid mb-3">
+                            <button class="btn btn-primary btn-lg" type="submit">Se connecter</button>
+                        </div>
+                    </form>
+
+                    <div class="text-center">
+                        <p class="text-muted">Pas encore de compte ? <a href="{{ path('app_register') }}" class="text-decoration-none">S'inscrire gratuitement</a></p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
