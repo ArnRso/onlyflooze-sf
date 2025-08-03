@@ -49,10 +49,17 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     #[ORM\OneToMany(targetEntity: Tag::class, mappedBy: 'user', orphanRemoval: true)]
     private Collection $tags;
 
+    /**
+     * @var Collection<int, RecurringTransaction>
+     */
+    #[ORM\OneToMany(targetEntity: RecurringTransaction::class, mappedBy: 'user', orphanRemoval: true)]
+    private Collection $recurringTransactions;
+
     public function __construct()
     {
         $this->transactions = new ArrayCollection();
         $this->tags = new ArrayCollection();
+        $this->recurringTransactions = new ArrayCollection();
     }
 
     public function getId(): ?int
@@ -200,6 +207,35 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
         if ($this->tags->removeElement($tag)) {
             if ($tag->getUser() === $this) {
                 $tag->setUser(null);
+            }
+        }
+
+        return $this;
+    }
+
+    /**
+     * @return Collection<int, RecurringTransaction>
+     */
+    public function getRecurringTransactions(): Collection
+    {
+        return $this->recurringTransactions;
+    }
+
+    public function addRecurringTransaction(RecurringTransaction $recurringTransaction): static
+    {
+        if (!$this->recurringTransactions->contains($recurringTransaction)) {
+            $this->recurringTransactions->add($recurringTransaction);
+            $recurringTransaction->setUser($this);
+        }
+
+        return $this;
+    }
+
+    public function removeRecurringTransaction(RecurringTransaction $recurringTransaction): static
+    {
+        if ($this->recurringTransactions->removeElement($recurringTransaction)) {
+            if ($recurringTransaction->getUser() === $this) {
+                $recurringTransaction->setUser(null);
             }
         }
 

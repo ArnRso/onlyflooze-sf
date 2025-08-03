@@ -70,6 +70,31 @@
                             </div>
                         {% endif %}
 
+                        {% if transaction.budgetMonth %}
+                            <div class="row mb-3">
+                                <div class="col-sm-4">
+                                    <strong>Mois budgétaire :</strong>
+                                </div>
+                                <div class="col-sm-8">
+                                    <span class="badge bg-secondary fs-6">{{ transaction.budgetMonth }}</span>
+                                </div>
+                            </div>
+                        {% endif %}
+
+                        {% if transaction.recurringTransaction %}
+                            <div class="row mb-3">
+                                <div class="col-sm-4">
+                                    <strong>Transaction récurrente :</strong>
+                                </div>
+                                <div class="col-sm-8">
+                                    <a href="{{ path('app_recurring_transaction_show', {'id': transaction.recurringTransaction.id}) }}"
+                                       class="badge bg-primary text-decoration-none fs-6">
+                                        🔄 {{ transaction.recurringTransaction.name }}
+                                    </a>
+                                </div>
+                            </div>
+                        {% endif %}
+
                         <div class="row mb-3">
                             <div class="col-sm-4">
                                 <strong>Créée le :</strong>

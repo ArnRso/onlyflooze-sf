@@ -38,6 +38,12 @@ class Transaction
     #[ORM\JoinTable(name: 'transaction_tag')]
     private Collection $tags;
 
+    #[ORM\Column(length: 7, nullable: true)]
+    private ?string $budgetMonth = null;
+
+    #[ORM\ManyToOne(inversedBy: 'transactions')]
+    private ?RecurringTransaction $recurringTransaction = null;
+
     public function __construct()
     {
         $this->tags = new ArrayCollection();
@@ -133,6 +139,30 @@ class Transaction
     public function removeTag(Tag $tag): static
     {
         $this->tags->removeElement($tag);
+
+        return $this;
+    }
+
+    public function getBudgetMonth(): ?string
+    {
+        return $this->budgetMonth;
+    }
+
+    public function setBudgetMonth(?string $budgetMonth): static
+    {
+        $this->budgetMonth = $budgetMonth;
+
+        return $this;
+    }
+
+    public function getRecurringTransaction(): ?RecurringTransaction
+    {
+        return $this->recurringTransaction;
+    }
+
+    public function setRecurringTransaction(?RecurringTransaction $recurringTransaction): static
+    {
+        $this->recurringTransaction = $recurringTransaction;
 
         return $this;
     }
