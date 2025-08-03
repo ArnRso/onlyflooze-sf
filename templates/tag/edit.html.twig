@@ -1,0 +1,42 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Modifier Tag - OnlyFlooze{% endblock %}
+
+{% block body %}
+    <div class="container py-4">
+        <div class="row justify-content-center">
+            <div class="col-md-6 col-lg-5">
+                <div class="card shadow">
+                    <div class="card-header bg-warning text-dark">
+                        <h4 class="mb-0">✏️ Modifier le Tag</h4>
+                    </div>
+                    <div class="card-body">
+                        {{ form_start(form) }}
+                        <div class="mb-3">
+                            {{ form_row(form.name) }}
+                        </div>
+
+                        <div class="mb-4">
+                            {{ form_row(form.color) }}
+                        </div>
+
+                        <div class="d-grid gap-2 d-md-flex justify-content-md-between">
+                            <a href="{{ path('app_tag_show', {'id': tag.id}) }}" class="btn btn-outline-info">
+                                <i class="fas fa-eye"></i> Voir
+                            </a>
+                            <div>
+                                <a href="{{ path('app_tag_index') }}" class="btn btn-secondary me-2">
+                                    <i class="fas fa-arrow-left"></i> Retour
+                                </a>
+                                <button type="submit" class="btn btn-warning">
+                                    <i class="fas fa-save"></i> Enregistrer
+                                </button>
+                            </div>
+                        </div>
+                        {{ form_end(form) }}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}

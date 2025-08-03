@@ -1,0 +1,153 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}{{ tag.name }} - OnlyFlooze{% endblock %}
+
+{% block body %}
+    <div class="container py-4">
+        <div class="row justify-content-center">
+            <div class="col-md-8 col-lg-6">
+                <div class="card shadow">
+                    <div class="card-header bg-info text-white">
+                        <h4 class="mb-0">👁️ Détails du Tag</h4>
+                    </div>
+                    <div class="card-body">
+                        <div class="row mb-3">
+                            <div class="col-sm-4">
+                                <strong>Nom :</strong>
+                            </div>
+                            <div class="col-sm-8">
+                                {% include 'components/tag.html.twig' with {
+                                    'tag': tag,
+                                    'size': 'lg'
+                                } %}
+                            </div>
+                        </div>
+
+                        <div class="row mb-3">
+                            <div class="col-sm-4">
+                                <strong>Couleur :</strong>
+                            </div>
+                            <div class="col-sm-8">
+                                <div class="d-flex align-items-center">
+                                    <div class="rounded me-2"
+                                         style="width: 30px; height: 30px; background-color: {{ tag.color }};"></div>
+                                    <code>{{ tag.color }}</code>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row mb-3">
+                            <div class="col-sm-4">
+                                <strong>Transactions :</strong>
+                            </div>
+                            <div class="col-sm-8">
+                                <span
+                                    class="badge bg-secondary fs-6">{{ tag.transactions|length }} transaction(s)</span>
+                            </div>
+                        </div>
+
+                        <div class="row mb-3">
+                            <div class="col-sm-4">
+                                <strong>Créé le :</strong>
+                            </div>
+                            <div class="col-sm-8">
+                                <small class="text-muted">
+                                    {{ tag.createdAt|date('d/m/Y à H:i') }}
+                                </small>
+                            </div>
+                        </div>
+
+                        {% if tag.updatedAt != tag.createdAt %}
+                            <div class="row mb-3">
+                                <div class="col-sm-4">
+                                    <strong>Modifié le :</strong>
+                                </div>
+                                <div class="col-sm-8">
+                                    <small class="text-muted">
+                                        {{ tag.updatedAt|date('d/m/Y à H:i') }}
+                                    </small>
+                                </div>
+                            </div>
+                        {% endif %}
+
+                        {% if tag.transactions|length > 0 %}
+                            <hr>
+                            <h6>Transactions associées :</h6>
+                            <div class="list-group list-group-flush">
+                                {% for transaction in tag.transactions|slice(0, 5) %}
+                                    <div class="list-group-item d-flex justify-content-between align-items-center">
+                                        <div>
+                                            <strong>{{ transaction.label }}</strong><br>
+                                            <small
+                                                class="text-muted">{{ transaction.transactionDate|date('d/m/Y') }}</small>
+                                        </div>
+                                        <span
+                                            class="{% if transaction.amountAsFloat >= 0 %}text-success{% else %}text-danger{% endif %} fw-bold">
+                                        {{ transaction.amount|number_format(2, ',', ' ') }}&nbsp;€
+                                    </span>
+                                    </div>
+                                {% endfor %}
+                                {% if tag.transactions|length > 5 %}
+                                    <div class="list-group-item text-center">
+                                        <small class="text-muted">... et {{ tag.transactions|length - 5 }} autre(s)
+                                            transaction(s)</small>
+                                    </div>
+                                {% endif %}
+                            </div>
+                        {% endif %}
+
+                        <hr>
+
+                        <div class="d-grid gap-2 d-md-flex justify-content-md-between">
+                            <a href="{{ path('app_tag_index') }}" class="btn btn-secondary">
+                                <i class="fas fa-arrow-left"></i> Retour à la liste
+                            </a>
+                            <div>
+                                <a href="{{ path('app_tag_edit', {'id': tag.id}) }}" class="btn btn-warning me-2">
+                                    <i class="fas fa-edit"></i> Modifier
+                                </a>
+                                <button type="button" class="btn btn-danger" data-bs-toggle="modal"
+                                        data-bs-target="#deleteModal">
+                                    <i class="fas fa-trash"></i> Supprimer
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de suppression -->
+    <div class="modal fade" id="deleteModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Confirmer la suppression</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Êtes-vous sûr de vouloir supprimer ce tag ?</p>
+                    <div class="alert alert-warning">
+                        {% include 'components/tag.html.twig' with {'tag': tag} %}
+                    </div>
+                    {% if tag.transactions|length > 0 %}
+                        <div class="alert alert-danger">
+                            <strong>Attention :</strong> Ce tag est utilisé dans {{ tag.transactions|length }}
+                            transaction(s).
+                            Il sera retiré de toutes ces transactions.
+                        </div>
+                    {% endif %}
+                    <p class="text-danger"><strong>Cette action est irréversible.</strong></p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                    <form method="post" action="{{ path('app_tag_delete', {'id': tag.id}) }}" style="display: inline;">
+                        <input type="hidden" name="_token" value="{{ csrf_token('delete' ~ tag.id) }}">
+                        <button type="submit" class="btn btn-danger">Supprimer définitivement</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}
