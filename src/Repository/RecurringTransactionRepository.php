@@ -6,6 +6,7 @@ use App\Entity\RecurringTransaction;
 use App\Entity\User;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
+use Ramsey\Uuid\UuidInterface;
 
 /**
  * @extends ServiceEntityRepository<RecurringTransaction>
@@ -30,7 +31,7 @@ class RecurringTransactionRepository extends ServiceEntityRepository
             ->getResult();
     }
 
-    public function findByUserAndId(User $user, int $id): ?RecurringTransaction
+    public function findByUserAndId(User $user, UuidInterface $id): ?RecurringTransaction
     {
         return $this->createQueryBuilder('rt')
             ->where('rt.user = :user')

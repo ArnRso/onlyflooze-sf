@@ -6,6 +6,7 @@ use App\Entity\RecurringTransaction;
 use App\Entity\User;
 use App\Repository\RecurringTransactionRepository;
 use Doctrine\ORM\EntityManagerInterface;
+use Ramsey\Uuid\UuidInterface;
 
 readonly class RecurringTransactionService
 {
@@ -47,7 +48,7 @@ readonly class RecurringTransactionService
         return $this->recurringTransactionRepository->findByUser($user);
     }
 
-    public function getUserRecurringTransactionById(User $user, int $id): ?RecurringTransaction
+    public function getUserRecurringTransactionById(User $user, UuidInterface $id): ?RecurringTransaction
     {
         return $this->recurringTransactionRepository->findByUserAndId($user, $id);
     }

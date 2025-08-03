@@ -54,7 +54,7 @@ class RecurringTransactionController extends AbstractController
         ]);
     }
 
-    #[Route('/{id}', name: 'app_recurring_transaction_show', methods: ['GET'])]
+    #[Route('/{id}', name: 'app_recurring_transaction_show', methods: ['GET'], requirements: ['id' => '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'])]
     public function show(RecurringTransaction $recurringTransaction): Response
     {
         $this->denyAccessUnlessGranted(RecurringTransactionVoter::VIEW, $recurringTransaction);
@@ -67,7 +67,7 @@ class RecurringTransactionController extends AbstractController
         ]);
     }
 
-    #[Route('/{id}/edit', name: 'app_recurring_transaction_edit', methods: ['GET', 'POST'])]
+    #[Route('/{id}/edit', name: 'app_recurring_transaction_edit', methods: ['GET', 'POST'], requirements: ['id' => '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'])]
     public function edit(Request $request, RecurringTransaction $recurringTransaction): Response
     {
         $this->denyAccessUnlessGranted(RecurringTransactionVoter::EDIT, $recurringTransaction);
@@ -89,7 +89,7 @@ class RecurringTransactionController extends AbstractController
         ]);
     }
 
-    #[Route('/{id}', name: 'app_recurring_transaction_delete', methods: ['POST'])]
+    #[Route('/{id}', name: 'app_recurring_transaction_delete', methods: ['POST'], requirements: ['id' => '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'])]
     public function delete(Request $request, RecurringTransaction $recurringTransaction): Response
     {
         $this->denyAccessUnlessGranted(RecurringTransactionVoter::DELETE, $recurringTransaction);
