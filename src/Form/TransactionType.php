@@ -2,8 +2,10 @@
 
 namespace App\Form;
 
+use App\Entity\RecurringTransaction;
 use App\Entity\Tag;
 use App\Entity\Transaction;
+use App\Repository\RecurringTransactionRepository;
 use App\Repository\TagRepository;
 use Symfony\Bridge\Doctrine\Form\Type\EntityType;
 use Symfony\Bundle\SecurityBundle\Security;
@@ -15,10 +17,15 @@ use Symfony\Component\Form\Extension\Core\Type\TextType;
 use Symfony\Component\Form\FormBuilderInterface;
 use Symfony\Component\OptionsResolver\OptionsResolver;
 use Symfony\Component\Validator\Constraints\NotBlank;
+use Symfony\Component\Validator\Constraints\Regex;
 
 class TransactionType extends AbstractType
 {
-    public function __construct(private readonly TagRepository $tagRepository, private readonly Security $security)
+    public function __construct(
+        private readonly TagRepository                  $tagRepository,
+        private readonly RecurringTransactionRepository $recurringTransactionRepository,
+        private readonly Security                       $security
+    )
     {
     }
 
@@ -80,6 +87,39 @@ class TransactionType extends AbstractType
                         ->where('t.user = :user')
                         ->setParameter('user', $user)
                         ->orderBy('t.name', 'ASC');
+                },
+            ])
+            ->add('budgetMonth', TextType::class, [
+                'label' => 'Mois budgétaire (YYYY-MM)',
+                'required' => false,
+                'attr' => [
+                    'class' => 'form-control',
+                    'placeholder' => '2025-01',
+                    'pattern' => '[0-9]{4}-[0-9]{2}'
+                ],
+                'help' => 'Format : YYYY-MM (ex: 2025-01 pour janvier 2025)',
+                'constraints' => [
+                    new Regex([
+                        'pattern' => '/^\d{4}-\d{2}$/',
+                        'message' => 'Le format doit être YYYY-MM (ex: 2025-01)',
+                    ]),
+                ],
+            ])
+            ->add('recurringTransaction', EntityType::class, [
+                'class' => RecurringTransaction::class,
+                'choice_label' => 'name',
+                'required' => false,
+                'label' => 'Transaction récurrente',
+                'placeholder' => 'Sélectionner une transaction récurrente...',
+                'attr' => [
+                    'class' => 'form-select'
+                ],
+                'query_builder' => function () {
+                    $user = $this->security->getUser();
+                    return $this->recurringTransactionRepository->createQueryBuilder('rt')
+                        ->where('rt.user = :user')
+                        ->setParameter('user', $user)
+                        ->orderBy('rt.name', 'ASC');
                 },
             ]);
     }

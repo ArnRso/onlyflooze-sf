@@ -65,6 +65,8 @@
                                 <th>Date</th>
                                 <th>Libellé</th>
                                 <th class="text-end">Montant</th>
+                                <th>Mois budgétaire</th>
+                                <th>Transaction récurrente</th>
                                 <th>Tags</th>
                                 <th>Informations</th>
                                 <th class="text-center">Actions</th>
@@ -85,6 +87,24 @@
                                             class="{% if transaction.amountAsFloat >= 0 %}text-success{% else %}text-danger{% endif %} fw-bold">
                                             {{ transaction.amount|number_format(2, ',', ' ') }}&nbsp;€
                                         </span>
+                                    </td>
+                                    <td>
+                                        {% if transaction.budgetMonth %}
+                                            <span class="badge bg-secondary">{{ transaction.budgetMonth }}</span>
+                                        {% else %}
+                                            <small class="text-muted">-</small>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if transaction.recurringTransaction %}
+                                            <a href="{{ path('app_recurring_transaction_show', {'id': transaction.recurringTransaction.id}) }}"
+                                               class="badge bg-primary text-decoration-none"
+                                               title="{{ transaction.recurringTransaction.name }}">
+                                                🔄 {{ transaction.recurringTransaction.name|slice(0, 15) }}{% if transaction.recurringTransaction.name|length > 15 %}...{% endif %}
+                                            </a>
+                                        {% else %}
+                                            <small class="text-muted">-</small>
+                                        {% endif %}
                                     </td>
                                     <td>
                                         {% if transaction.tags|length > 0 %}

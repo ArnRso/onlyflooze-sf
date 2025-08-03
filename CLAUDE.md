@@ -86,3 +86,7 @@ This is a **Symfony 7.3** web application with authentication features, using Po
 ## Formatting and Display Guidelines
 
 - Sur tous les endroits où on affiche des prix (avec number format par exemple), on utilise jamais d'espaces normaux mais des espaces insécables
+
+## Database Entity Guidelines
+
+- Pour toutes les entités, on utilise pas d'id incrémental mais un uuid

@@ -2,11 +2,12 @@
 
 namespace App\Service;
 
+use App\Entity\RecurringTransaction;
 use App\Entity\Transaction;
 use App\Entity\User;
 use App\Repository\TransactionRepository;
-use Doctrine\ORM\EntityManagerInterface;
 use DateTimeImmutable;
+use Doctrine\ORM\EntityManagerInterface;
 
 readonly class TransactionService
 {
@@ -114,6 +115,79 @@ readonly class TransactionService
             ->setMaxResults($limit)
             ->getQuery()
             ->getResult();
+    }
+
+    /**
+     * @return Transaction[]
+     */
+    public function getUserTransactionsByBudgetMonth(User $user, string $budgetMonth): array
+    {
+        return $this->entityManager->createQueryBuilder()
+            ->select('t')
+            ->from(Transaction::class, 't')
+            ->where('t.user = :user')
+            ->andWhere('t.budgetMonth = :budgetMonth')
+            ->setParameter('user', $user)
+            ->setParameter('budgetMonth', $budgetMonth)
+            ->orderBy('t.transactionDate', 'DESC')
+            ->getQuery()
+            ->getResult();
+    }
+
+    /**
+     * @return Transaction[]
+     */
+    public function getUserTransactionsByRecurringTransaction(User $user, RecurringTransaction $recurringTransaction): array
+    {
+        return $this->entityManager->createQueryBuilder()
+            ->select('t')
+            ->from(Transaction::class, 't')
+            ->where('t.user = :user')
+            ->andWhere('t.recurringTransaction = :recurringTransaction')
+            ->setParameter('user', $user)
+            ->setParameter('recurringTransaction', $recurringTransaction)
+            ->orderBy('t.transactionDate', 'DESC')
+            ->getQuery()
+            ->getResult();
+    }
+
+    public function getTotalByBudgetMonth(User $user, string $budgetMonth): float
+    {
+        $result = $this->entityManager->createQueryBuilder()
+            ->select('SUM(t.amount)')
+            ->from(Transaction::class, 't')
+            ->where('t.user = :user')
+            ->andWhere('t.budgetMonth = :budgetMonth')
+            ->setParameter('user', $user)
+            ->setParameter('budgetMonth', $budgetMonth)
+            ->getQuery()
+            ->getSingleScalarResult();
+
+        return (float)($result ?? 0);
+    }
+
+    /**
+     * @return array<string, float>
+     */
+    public function getBudgetMonthsSummary(User $user): array
+    {
+        $results = $this->entityManager->createQueryBuilder()
+            ->select('t.budgetMonth, SUM(t.amount) as total')
+            ->from(Transaction::class, 't')
+            ->where('t.user = :user')
+            ->andWhere('t.budgetMonth IS NOT NULL')
+            ->setParameter('user', $user)
+            ->groupBy('t.budgetMonth')
+            ->orderBy('t.budgetMonth', 'DESC')
+            ->getQuery()
+            ->getResult();
+
+        $summary = [];
+        foreach ($results as $result) {
+            $summary[$result['budgetMonth']] = (float)$result['total'];
+        }
+
+        return $summary;
     }
 
 }
