@@ -54,6 +54,22 @@
                             </div>
                         {% endif %}
 
+                        {% if transaction.tags|length > 0 %}
+                            <div class="row mb-3">
+                                <div class="col-sm-4">
+                                    <strong>Tags :</strong>
+                                </div>
+                                <div class="col-sm-8">
+                                    {% for tag in transaction.tags %}
+                                        {% include 'components/tag.html.twig' with {
+                                            'tag': tag,
+                                            'class': 'me-1 mb-1'
+                                        } %}
+                                    {% endfor %}
+                                </div>
+                            </div>
+                        {% endif %}
+
                         <div class="row mb-3">
                             <div class="col-sm-4">
                                 <strong>Créée le :</strong>

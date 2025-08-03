@@ -1,0 +1,25 @@
+{#
+Composant pour afficher un tag avec couleur automatique
+
+Paramètres:
+- tag: L'entité Tag à afficher
+- size: 'sm', 'md', 'lg' (optionnel, défaut: 'md')
+- class: classes CSS supplémentaires (optionnel)
+- rounded: true/false pour badge arrondi (optionnel, défaut: true)
+#}
+
+{% set sizeClass = '' %}
+{% if size is defined %}
+    {% if size == 'sm' %}
+        {% set sizeClass = 'badge-sm' %}
+    {% elseif size == 'lg' %}
+        {% set sizeClass = 'fs-6' %}
+    {% endif %}
+{% endif %}
+
+{% set roundedClass = rounded is defined and rounded == false ? '' : 'rounded-pill' %}
+
+<span class="badge {{ roundedClass }} {{ sizeClass }} {{ class|default('') }}"
+      style="background-color: {{ tag.color }}; color: {{ tag_text_color(tag.color) }};">
+    {{ tag.name }}
+</span>
