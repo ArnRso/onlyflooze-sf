@@ -56,7 +56,7 @@ class TagController extends AbstractController
         ]);
     }
 
-    #[Route('/{id}', name: 'app_tag_show', methods: ['GET'])]
+    #[Route('/{id}', name: 'app_tag_show', methods: ['GET'], requirements: ['id' => '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'])]
     public function show(Tag $tag): Response
     {
         $this->denyAccessUnlessGranted(TagVoter::VIEW, $tag);
@@ -66,7 +66,7 @@ class TagController extends AbstractController
         ]);
     }
 
-    #[Route('/{id}/edit', name: 'app_tag_edit', methods: ['GET', 'POST'])]
+    #[Route('/{id}/edit', name: 'app_tag_edit', methods: ['GET', 'POST'], requirements: ['id' => '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'])]
     public function edit(Request $request, Tag $tag): Response
     {
         $this->denyAccessUnlessGranted(TagVoter::EDIT, $tag);
@@ -88,7 +88,7 @@ class TagController extends AbstractController
         ]);
     }
 
-    #[Route('/{id}', name: 'app_tag_delete', methods: ['POST'])]
+    #[Route('/{id}', name: 'app_tag_delete', methods: ['POST'], requirements: ['id' => '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'])]
     public function delete(Request $request, Tag $tag): Response
     {
         $this->denyAccessUnlessGranted(TagVoter::DELETE, $tag);
