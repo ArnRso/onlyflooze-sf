@@ -95,7 +95,7 @@
                                        name="budgetMonth" placeholder="Ex: 2024-01"
                                        value="{{ app.request.query.get('budgetMonth', '') }}">
                             </div>
-                            <div class="col-md-6 mb-3">
+                            <div class="col-md-3 mb-3">
                                 <label for="hasRecurringTransaction" class="form-label">Transaction récurrente</label>
                                 <select class="form-select" id="hasRecurringTransaction"
                                         name="hasRecurringTransaction">
@@ -110,7 +110,36 @@
                                     </option>
                                 </select>
                             </div>
-                            <div class="col-md-6 mb-3 d-flex align-items-end">
+                            <div class="col-md-3 mb-3">
+                                <label for="specificRecurringTransaction" class="form-label">Transaction récurrente
+                                    spécifique</label>
+                                <select class="form-select" id="specificRecurringTransaction"
+                                        name="specificRecurringTransaction">
+                                    <option value="">Toutes</option>
+                                    {% for recurring in recurringTransactions %}
+                                        <option value="{{ recurring[0].id }}"
+                                                {% if app.request.query.get('specificRecurringTransaction') == recurring[0].id %}selected{% endif %}>
+                                            {{ recurring[0].name }}
+                                        </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-md-3 mb-3">
+                                <label for="specificTag" class="form-label">Tag spécifique</label>
+                                <select class="form-select" id="specificTag" name="specificTag">
+                                    <option value="">Tous</option>
+                                    {% for tag in tags %}
+                                        <option value="{{ tag[0].id }}"
+                                                {% if app.request.query.get('specificTag') == tag[0].id %}selected{% endif %}>
+                                            {{ tag[0].name }}
+                                        </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-12 mb-3 d-flex align-items-end justify-content-end">
                                 <div class="w-100">
                                     <a href="{{ path('app_transaction_index') }}"
                                        class="btn btn-outline-secondary me-2">
