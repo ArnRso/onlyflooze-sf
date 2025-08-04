@@ -260,6 +260,22 @@ readonly class TransactionService
                 ->setParameter('tagIds', $criteria['tagIds']);
         }
 
+        if (!empty($criteria['specificTag'])) {
+            // Use EXISTS subquery to filter by specific tag while keeping all tags in results
+            $qb->andWhere('EXISTS (
+                SELECT 1 FROM App\Entity\Tag filterTag
+                JOIN filterTag.transactions filterTrans
+                WHERE filterTrans.id = t.id
+                AND filterTag.id = :specificTagId
+            )')
+                ->setParameter('specificTagId', $criteria['specificTag']);
+        }
+
+        if (!empty($criteria['specificRecurringTransaction'])) {
+            $qb->andWhere('rt.id = :specificRecurringTransactionId')
+                ->setParameter('specificRecurringTransactionId', $criteria['specificRecurringTransaction']);
+        }
+
         $qb->orderBy('t.transactionDate', 'DESC')
             ->addOrderBy('t.createdAt', 'DESC');
 
@@ -292,8 +308,6 @@ readonly class TransactionService
      */
     public function assignTagsToTransactions(array $transactionIds, array $tags): int
     {
-        $updatedCount = 0;
-
         // Convertir les strings en UUID
         $uuidTransactionIds = array_map(static fn($id) => Uuid::fromString($id), $transactionIds);
 
@@ -310,7 +324,6 @@ readonly class TransactionService
             foreach ($tags as $tag) {
                 if (!$transaction->getTags()->contains($tag)) {
                     $transaction->addTag($tag);
-                    $updatedCount++;
                 }
             }
         }

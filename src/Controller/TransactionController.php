@@ -59,9 +59,11 @@ class TransactionController extends AbstractController
             'endDate' => $request->query->get('endDate', ''),
             'budgetMonth' => $request->query->get('budgetMonth', ''),
             'hasRecurringTransaction' => $request->query->get('hasRecurringTransaction', ''),
+            'specificRecurringTransaction' => $request->query->get('specificRecurringTransaction', ''),
+            'specificTag' => $request->query->get('specificTag', ''),
         ];
 
-        $searchCriteria = array_filter($searchCriteria, static fn($value) => $value !== '');
+        $searchCriteria = array_filter($searchCriteria, static fn($value) => $value !== '' && !empty($value));
 
         // Use search or regular query
         if (!empty($searchCriteria)) {
