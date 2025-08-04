@@ -1,0 +1,19 @@
+includes:
+    - vendor/phpstan/phpstan-symfony/extension.neon
+    - vendor/phpstan/phpstan-doctrine/extension.neon
+
+parameters:
+    level: 8
+    paths:
+        - src
+    excludePaths:
+        - src/Kernel.php
+    symfony:
+        containerXmlPath: var/cache/dev/App_KernelDevDebugContainer.xml
+        consoleApplicationLoader: tests/console-loader.php
+    doctrine:
+        objectManagerLoader: tests/object-manager.php
+    reportUnmatchedIgnoredErrors: false
+    parallel:
+        processTimeout: 300.0
+        maximumNumberOfProcesses: 2
