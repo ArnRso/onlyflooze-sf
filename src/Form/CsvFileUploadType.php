@@ -18,8 +18,7 @@ class CsvFileUploadType extends AbstractType
                 'label' => 'Sélectionnez votre fichier CSV',
                 'attr' => [
                     'class' => 'form-control',
-                    'accept' => '.csv,.txt',
-                    'onchange' => 'handleFileUpload(this)'
+                    'accept' => '.csv,.txt'
                 ],
                 'constraints' => [
                     new NotBlank(['message' => 'Veuillez sélectionner un fichier']),
@@ -29,7 +28,9 @@ class CsvFileUploadType extends AbstractType
                             'text/csv',
                             'text/plain',
                             'application/csv',
-                            'text/comma-separated-values'
+                            'text/comma-separated-values',
+                            'application/vnd.ms-excel',
+                            'application/octet-stream'
                         ],
                         'mimeTypesMessage' => 'Veuillez uploader un fichier CSV valide',
                     ])

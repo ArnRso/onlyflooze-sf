@@ -90,7 +90,8 @@
                                                 {% endif %}
                                             </td>
                                             <td>
-                                                {{ row.parsed_data.label|default('-')|truncate(50) }}
+                                                {% set label = row.parsed_data.label|default('-') %}
+                                                {{ label|length > 50 ? label|slice(0, 50) ~ '...' : label }}
                                             </td>
                                             <td>
                                                 {% if row.parsed_data.amount is defined %}

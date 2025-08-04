@@ -30,7 +30,9 @@ class CsvUploadType extends AbstractType
                             'text/csv',
                             'text/plain',
                             'application/csv',
-                            'text/comma-separated-values'
+                            'text/comma-separated-values',
+                            'application/vnd.ms-excel',
+                            'application/octet-stream'
                         ],
                         'mimeTypesMessage' => 'Veuillez uploader un fichier CSV valide',
                     ])
