@@ -58,11 +58,25 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     #[ORM\OneToMany(targetEntity: RecurringTransaction::class, mappedBy: 'user', orphanRemoval: true)]
     private Collection $recurringTransactions;
 
+    /**
+     * @var Collection<int, CsvImportProfile>
+     */
+    #[ORM\OneToMany(targetEntity: CsvImportProfile::class, mappedBy: 'user', orphanRemoval: true)]
+    private Collection $csvImportProfiles;
+
+    /**
+     * @var Collection<int, CsvImportSession>
+     */
+    #[ORM\OneToMany(targetEntity: CsvImportSession::class, mappedBy: 'user', orphanRemoval: true)]
+    private Collection $csvImportSessions;
+
     public function __construct()
     {
         $this->transactions = new ArrayCollection();
         $this->tags = new ArrayCollection();
         $this->recurringTransactions = new ArrayCollection();
+        $this->csvImportProfiles = new ArrayCollection();
+        $this->csvImportSessions = new ArrayCollection();
     }
 
     public function getId(): ?UuidInterface
@@ -239,6 +253,64 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
         if ($this->recurringTransactions->removeElement($recurringTransaction)) {
             if ($recurringTransaction->getUser() === $this) {
                 $recurringTransaction->setUser(null);
+            }
+        }
+
+        return $this;
+    }
+
+    /**
+     * @return Collection<int, CsvImportProfile>
+     */
+    public function getCsvImportProfiles(): Collection
+    {
+        return $this->csvImportProfiles;
+    }
+
+    public function addCsvImportProfile(CsvImportProfile $csvImportProfile): static
+    {
+        if (!$this->csvImportProfiles->contains($csvImportProfile)) {
+            $this->csvImportProfiles->add($csvImportProfile);
+            $csvImportProfile->setUser($this);
+        }
+
+        return $this;
+    }
+
+    public function removeCsvImportProfile(CsvImportProfile $csvImportProfile): static
+    {
+        if ($this->csvImportProfiles->removeElement($csvImportProfile)) {
+            if ($csvImportProfile->getUser() === $this) {
+                $csvImportProfile->setUser(null);
+            }
+        }
+
+        return $this;
+    }
+
+    /**
+     * @return Collection<int, CsvImportSession>
+     */
+    public function getCsvImportSessions(): Collection
+    {
+        return $this->csvImportSessions;
+    }
+
+    public function addCsvImportSession(CsvImportSession $csvImportSession): static
+    {
+        if (!$this->csvImportSessions->contains($csvImportSession)) {
+            $this->csvImportSessions->add($csvImportSession);
+            $csvImportSession->setUser($this);
+        }
+
+        return $this;
+    }
+
+    public function removeCsvImportSession(CsvImportSession $csvImportSession): static
+    {
+        if ($this->csvImportSessions->removeElement($csvImportSession)) {
+            if ($csvImportSession->getUser() === $this) {
+                $csvImportSession->setUser(null);
             }
         }
 

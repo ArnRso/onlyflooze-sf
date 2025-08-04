@@ -6,6 +6,7 @@ use App\Entity\Transaction;
 use App\Form\TransactionType;
 use App\Security\Voter\TransactionVoter;
 use App\Service\TransactionService;
+use Knp\Component\Pager\PaginatorInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -17,16 +18,35 @@ use Symfony\Component\Security\Http\Attribute\IsGranted;
 class TransactionController extends AbstractController
 {
     public function __construct(
-        private readonly TransactionService $transactionService
+        private readonly TransactionService $transactionService,
+        private readonly PaginatorInterface $paginator
     )
     {
     }
 
     #[Route('/', name: 'app_transaction_index', methods: ['GET'])]
-    public function index(): Response
+    public function index(Request $request): Response
     {
         $user = $this->getUser();
-        $transactions = $this->transactionService->getUserTransactions($user);
+
+        // Get limit from query parameter (default: 20, allowed: 10, 20, 50, 100)
+        $limit = $request->query->getInt('limit', 20);
+        $allowedLimits = [10, 20, 50, 100];
+        if (!in_array($limit, $allowedLimits)) {
+            $limit = 20;
+        }
+
+        // Get paginated transactions
+        $query = $this->transactionService->getUserTransactionsQuery($user);
+        $transactions = $this->paginator->paginate(
+            $query,
+            $request->query->getInt('page', 1),
+            $limit
+        );
+
+        // Preserve the limit parameter in pagination links
+        $transactions->setParam('limit', $limit);
+
         $stats = $this->transactionService->getUserTransactionStats($user);
 
         return $this->render('transaction/index.html.twig', [

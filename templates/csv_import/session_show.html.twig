@@ -1,0 +1,267 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Détails de l'import - {{ parent() }}{% endblock %}
+
+
+{% block body %}
+    <div class="container mt-4">
+        <div class="row">
+            <div class="col-md-12">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h1 class="h2">Détails de l'import</h1>
+                    <div>
+                        <a href="{{ path('app_csv_import_sessions') }}" class="btn btn-outline-secondary">
+                            <i class="bi bi-arrow-left"></i> Retour à l'historique
+                        </a>
+                        <a href="{{ path('app_csv_import_upload') }}" class="btn btn-primary">
+                            <i class="bi bi-upload"></i> Nouvel import
+                        </a>
+                    </div>
+                </div>
+
+                {% for label, messages in app.flashes %}
+                    {% for message in messages %}
+                        <div class="alert alert-{{ label == 'error' ? 'danger' : label }} alert-dismissible fade show"
+                             role="alert">
+                            {{ message }}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                        </div>
+                    {% endfor %}
+                {% endfor %}
+
+                <div class="row">
+                    <!-- Informations de la session -->
+                    <div class="col-md-6">
+                        <div class="card">
+                            <div class="card-header">
+                                <h5 class="mb-0">
+                                    <i class="bi bi-info-circle"></i> Informations de l'import
+                                </h5>
+                            </div>
+                            <div class="card-body">
+                                <table class="table table-borderless table-sm">
+                                    <tr>
+                                        <td><strong>Date d'import :</strong></td>
+                                        <td>{{ session.createdAt|date('d/m/Y à H:i:s') }}</td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>Profil utilisé :</strong></td>
+                                        <td>
+                                            <a href="{{ path('app_csv_import_profile_show', {'id': session.profile.id}) }}">
+                                                {{ session.profile.name }}
+                                            </a>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>Fichier :</strong></td>
+                                        <td>{{ session.filename|default('Fichier inconnu') }}</td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>Statut :</strong></td>
+                                        <td>
+                                            {% set statusClass = session.status == 'completed' ? 'success' : (session.status == 'failed' ? 'danger' : 'warning') %}
+                                            <span class="badge bg-{{ statusClass }}">
+                                            {% if session.status == 'completed' %}
+                                                Terminé avec succès
+                                            {% elseif session.status == 'failed' %}
+                                                Échec
+                                            {% elseif session.status == 'pending' %}
+                                                En attente
+                                            {% else %}
+                                                {{ session.status }}
+                                            {% endif %}
+                                        </span>
+                                        </td>
+                                    </tr>
+                                    {% if session.notes %}
+                                        <tr>
+                                            <td><strong>Notes :</strong></td>
+                                            <td class="text-{{ session.status == 'failed' ? 'danger' : 'info' }}">{{ session.notes }}</td>
+                                        </tr>
+                                    {% endif %}
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Résultats de l'import -->
+                    <div class="col-md-6">
+                        <div class="card">
+                            <div class="card-header">
+                                <h5 class="mb-0">
+                                    <i class="bi bi-bar-chart"></i> Résultats
+                                </h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="row text-center">
+                                    <div class="col-6 border-end">
+                                        <h3 class="text-info mb-0">{{ session.totalRows }}</h3>
+                                        <small class="text-muted">Lignes traitées</small>
+                                    </div>
+                                    <div class="col-6">
+                                        {% set processedRate = session.totalRows > 0 ? ((session.successfulImports + session.duplicates + session.errors) / session.totalRows * 100)|round(1) : 0 %}
+                                        <h3 class="text-secondary mb-0">{{ processedRate }}%</h3>
+                                        <small class="text-muted">Taux de traitement</small>
+                                    </div>
+                                </div>
+                                <hr>
+                                <div class="row text-center">
+                                    <div class="col-4">
+                                        <h4 class="text-success mb-0">{{ session.successfulImports }}</h4>
+                                        <small class="text-muted">Importées</small>
+                                    </div>
+                                    <div class="col-4">
+                                        <h4 class="text-warning mb-0">{{ session.duplicates }}</h4>
+                                        <small class="text-muted">Doublons</small>
+                                    </div>
+                                    <div class="col-4">
+                                        <h4 class="text-danger mb-0">{{ session.errors }}</h4>
+                                        <small class="text-muted">Erreurs</small>
+                                    </div>
+                                </div>
+
+                                {% if session.totalRows > 0 %}
+                                    <div class="mt-3">
+                                        <div class="progress" style="height: 20px;">
+                                            {% set successPercent = (session.successfulImports / session.totalRows * 100) %}
+                                            {% set duplicatePercent = (session.duplicates / session.totalRows * 100) %}
+                                            {% set errorPercent = (session.errors / session.totalRows * 100) %}
+
+                                            <div class="progress-bar bg-success" style="width: {{ successPercent }}%"
+                                                 title="{{ session.successfulImports }} importées">
+                                            </div>
+                                            <div class="progress-bar bg-warning" style="width: {{ duplicatePercent }}%"
+                                                 title="{{ session.duplicates }} doublons">
+                                            </div>
+                                            <div class="progress-bar bg-danger" style="width: {{ errorPercent }}%"
+                                                 title="{{ session.errors }} erreurs">
+                                            </div>
+                                        </div>
+                                        <div class="small text-muted text-center mt-1">
+                                            Répartition des résultats
+                                        </div>
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Configuration du profil utilisé -->
+                <div class="row mt-4">
+                    <div class="col-md-12">
+                        <div class="card">
+                            <div class="card-header">
+                                <h5 class="mb-0">
+                                    <i class="bi bi-gear"></i> Configuration utilisée
+                                </h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="row">
+                                    <div class="col-md-3">
+                                        <h6>Format de fichier</h6>
+                                        <ul class="list-unstyled small">
+                                            <li><strong>Séparateur :</strong> "{{ session.profile.delimiter }}"</li>
+                                            <li><strong>Encodage :</strong> {{ session.profile.encoding }}</li>
+                                            <li><strong>En-tête
+                                                    :</strong> {{ session.profile.hasHeader ? 'Oui' : 'Non' }}</li>
+                                            <li><strong>Format date :</strong> {{ session.profile.dateFormat }}</li>
+                                        </ul>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <h6>Type de montant</h6>
+                                        <div class="small">
+                                        <span
+                                            class="badge bg-{{ session.profile.amountType == 'single' ? 'primary' : 'info' }}">
+                                            {{ session.profile.amountType == 'single' ? 'Colonne unique' : 'Crédit/Débit séparés' }}
+                                        </span>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <h6>Mapping des colonnes</h6>
+                                        <div class="small">
+                                            {% set mapping = session.profile.columnMapping %}
+                                            <div class="row">
+                                                <div class="col-6">
+                                                    <strong>Date :</strong> Colonne {{ mapping.date ?? 'N/A' }}<br>
+                                                    <strong>Libellé :</strong> Colonne {{ mapping.label ?? 'N/A' }}
+                                                </div>
+                                                <div class="col-6">
+                                                    {% if session.profile.amountType == 'single' %}
+                                                        <strong>Montant :</strong> Colonne {{ mapping.amount ?? 'N/A' }}
+                                                    {% else %}
+                                                        <strong>Crédit :</strong> Colonne {{ mapping.credit ?? 'N/A' }}
+                                                        <br>
+                                                        <strong>Débit :</strong> Colonne {{ mapping.debit ?? 'N/A' }}
+                                                    {% endif %}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Actions possibles -->
+                <div class="row mt-4">
+                    <div class="col-md-12">
+                        <div class="card bg-light">
+                            <div class="card-header">
+                                <h5 class="mb-0">
+                                    <i class="bi bi-lightning"></i> Actions rapides
+                                </h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="d-flex flex-wrap gap-2">
+                                    <a href="{{ path('app_csv_import_upload') }}" class="btn btn-primary">
+                                        <i class="bi bi-upload"></i> Nouvel import avec ce profil
+                                    </a>
+                                    <a href="{{ path('app_transaction_index') }}" class="btn btn-outline-success">
+                                        <i class="bi bi-list"></i> Voir mes transactions
+                                    </a>
+                                    <a href="{{ path('app_csv_import_profile_show', {'id': session.profile.id}) }}"
+                                       class="btn btn-outline-info">
+                                        <i class="bi bi-eye"></i> Voir le profil
+                                    </a>
+                                    <a href="{{ path('app_csv_import_profile_edit', {'id': session.profile.id}) }}"
+                                       class="btn btn-outline-secondary">
+                                        <i class="bi bi-pencil"></i> Modifier le profil
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Conseils -->
+                {% if session.errors > 0 or session.duplicates > session.successfulImports %}
+                    <div class="row mt-4">
+                        <div class="col-md-12">
+                            <div class="alert alert-info">
+                                <h6><i class="bi bi-lightbulb"></i> Conseils pour améliorer vos imports</h6>
+                                <ul class="mb-0 small">
+                                    {% if session.errors > 0 %}
+                                        <li><strong>Erreurs détectées :</strong> Vérifiez le format de votre fichier et
+                                            la configuration de votre profil.
+                                        </li>
+                                    {% endif %}
+                                    {% if session.duplicates > session.successfulImports %}
+                                        <li><strong>Beaucoup de doublons :</strong> Ce fichier contient des transactions
+                                            déjà importées. Les doublons sont automatiquement ignorés.
+                                        </li>
+                                    {% endif %}
+                                    <li><strong>Pour des résultats optimaux :</strong> Utilisez des fichiers CSV propres
+                                        et vérifiez la correspondance entre la structure du fichier et la configuration
+                                        du profil.
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+{% endblock %}
