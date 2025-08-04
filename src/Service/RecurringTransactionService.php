@@ -131,4 +131,21 @@ readonly class RecurringTransactionService
     {
         return $this->recurringTransactionRepository->findByUserWithTransactions($user);
     }
+
+    /**
+     * Récupère les transactions récurrentes de l'utilisateur avec le nombre de transactions
+     */
+    public function getUserRecurringTransactionsWithCount(User $user): array
+    {
+        return $this->entityManager->createQueryBuilder()
+            ->select('rt', 'COUNT(t.id) as transactionCount')
+            ->from(RecurringTransaction::class, 'rt')
+            ->leftJoin('rt.transactions', 't')
+            ->where('rt.user = :user')
+            ->setParameter('user', $user)
+            ->groupBy('rt.id')
+            ->orderBy('rt.name', 'ASC')
+            ->getQuery()
+            ->getResult();
+    }
 }

@@ -2,6 +2,25 @@
 
 {% block title %}Mes Transactions - OnlyFlooze{% endblock %}
 
+{% block stylesheets %}
+    {{ parent() }}
+    <style>
+        .is-warning {
+            border-color: #ffc107;
+            box-shadow: 0 0 0 0.2rem rgba(255, 193, 7, 0.25);
+        }
+
+        .tag-item {
+            transition: transform 0.2s ease, opacity 0.2s ease;
+        }
+
+        .suggestion-tag:hover {
+            opacity: 0.8;
+            transform: scale(1.05);
+        }
+    </style>
+{% endblock %}
+
 {% block javascripts %}
     {{ parent() }}
     {{ importmap('transaction-pagination') }}
@@ -76,7 +95,7 @@
                                        name="budgetMonth" placeholder="Ex: 2024-01"
                                        value="{{ app.request.query.get('budgetMonth', '') }}">
                             </div>
-                            <div class="col-md-3 mb-3">
+                            <div class="col-md-6 mb-3">
                                 <label for="hasRecurringTransaction" class="form-label">Transaction récurrente</label>
                                 <select class="form-select" id="hasRecurringTransaction"
                                         name="hasRecurringTransaction">
@@ -91,25 +110,7 @@
                                     </option>
                                 </select>
                             </div>
-                            <div class="col-md-3 mb-3">
-                                <label for="limit" class="form-label">Transactions par page</label>
-                                <select class="form-select" id="limit" name="limit">
-                                    <option value="10"
-                                            {% if app.request.query.get('limit', '20') == '10' %}selected{% endif %}>10
-                                    </option>
-                                    <option value="20"
-                                            {% if app.request.query.get('limit', '20') == '20' %}selected{% endif %}>20
-                                    </option>
-                                    <option value="50"
-                                            {% if app.request.query.get('limit', '20') == '50' %}selected{% endif %}>50
-                                    </option>
-                                    <option value="100"
-                                            {% if app.request.query.get('limit', '20') == '100' %}selected{% endif %}>
-                                        100
-                                    </option>
-                                </select>
-                            </div>
-                            <div class="col-md-3 mb-3 d-flex align-items-end">
+                            <div class="col-md-6 mb-3 d-flex align-items-end">
                                 <div class="w-100">
                                     <a href="{{ path('app_transaction_index') }}"
                                        class="btn btn-outline-secondary me-2">
@@ -177,10 +178,16 @@
                     <button type="button" class="btn btn-sm btn-outline-secondary me-2" id="clear-selection">
                         <i class="fas fa-times"></i> Désélectionner tout
                     </button>
-                    <button type="button" class="btn btn-sm btn-success" data-bs-toggle="modal"
-                            data-bs-target="#assignModal">
-                        <i class="fas fa-tasks"></i> Attribuer à une récurrente
-                    </button>
+                    <div class="btn-group">
+                        <button type="button" class="btn btn-sm btn-success" data-bs-toggle="modal"
+                                data-bs-target="#assignModal">
+                            <i class="fas fa-tasks"></i> Attribuer à une récurrente
+                        </button>
+                        <button type="button" class="btn btn-sm btn-warning" data-bs-toggle="modal"
+                                data-bs-target="#assignTagModal">
+                            <i class="fas fa-tags"></i> Attribuer des tags
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -211,6 +218,12 @@
                                     </option>
                                     <option value="100" {{ app.request.query.get('limit') == '100' ? 'selected' : '' }}>
                                         100
+                                    </option>
+                                    <option value="250" {{ app.request.query.get('limit') == '250' ? 'selected' : '' }}>
+                                        250
+                                    </option>
+                                    <option value="500" {{ app.request.query.get('limit') == '500' ? 'selected' : '' }}>
+                                        500
                                     </option>
                                 </select>
                             </div>
@@ -424,8 +437,8 @@
                                         onchange="toggleNewRecurringField(this)">
                                     <option value="">Sélectionner une transaction récurrente</option>
                                     {% for recurring in recurringTransactions %}
-                                        <option value="{{ recurring.id }}">{{ recurring.name }}
-                                            ({{ recurring.transactions|length }} transactions)
+                                        <option value="{{ recurring[0].id }}">{{ recurring[0].name }}
+                                            ({{ recurring.transactionCount }} transactions)
                                         </option>
                                     {% endfor %}
                                     <option value="new">➕ Créer une nouvelle transaction récurrente</option>
@@ -443,6 +456,96 @@
                         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
                         <button type="submit" class="btn btn-success">
                             <i class="fas fa-check"></i> Attribuer les transactions
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal d'attribution des tags -->
+    <div class="modal fade" id="assignTagModal" tabindex="-1" aria-labelledby="assignTagModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <form method="POST" action="{{ path('app_transaction_assign_tags') }}" id="assign-tag-form">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="assignTagModalLabel">
+                            <i class="fas fa-tags"></i> Attribution de tags en masse
+                        </h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <input type="hidden" name="_token" value="{{ csrf_token('assign_tags') }}">
+
+                        <!-- Inclure les critères de recherche pour revenir aux mêmes résultats -->
+                        {% for key, value in app.request.query.all %}
+                            <input type="hidden" name="search_{{ key }}" value="{{ value }}">
+                        {% endfor %}
+
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle"></i>
+                            <strong>Instructions :</strong> Vous êtes sur le point d'attribuer des tags à <span
+                                id="modal-tag-selected-count">0</span> transaction(s).
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Tags existants</label>
+                                <div id="existing-tags-visual" class="border rounded p-3"
+                                     style="min-height: 150px; max-height: 200px; overflow-y: auto;">
+                                    {% for tag in tags %}
+                                        <div class="tag-item d-inline-block m-1 position-relative"
+                                             data-tag-id="{{ tag[0].id }}"
+                                             data-tag-name="{{ tag[0].name }}"
+                                             style="cursor: pointer;">
+                                            <span class="badge fs-6 py-2 px-3"
+                                                  style="background-color: {{ tag[0].color }}; color: white;">
+                                                {{ tag[0].name }} ({{ tag.transactionCount }})
+                                            </span>
+                                            <i class="fas fa-check position-absolute top-0 start-100 translate-middle bg-success text-white rounded-circle p-1 tag-check"
+                                               style="font-size: 0.7rem; display: none;"></i>
+                                        </div>
+                                        <!-- Checkbox caché pour le formulaire -->
+                                        <input type="checkbox" class="d-none existing-tag-checkbox"
+                                               name="existing_tags[]"
+                                               value="{{ tag[0].id }}"
+                                               id="tag_{{ tag[0].id }}">
+                                    {% endfor %}
+                                </div>
+                                <small class="form-text text-muted">Cliquez sur les tags pour les sélectionner</small>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="new_tags" class="form-label">Nouveaux tags</label>
+                                <div id="new-tags-container">
+                                    <div class="new-tag-input mb-2">
+                                        <div class="input-group">
+                                            <input type="text" class="form-control new-tag-name-input"
+                                                   name="new_tags[0][name]" placeholder="Nom du tag">
+                                            <button type="button" class="btn btn-outline-danger remove-tag-input">
+                                                <i class="fas fa-minus"></i>
+                                            </button>
+                                        </div>
+                                        <small class="form-text text-muted duplicate-warning" style="display: none;">
+                                            <i class="fas fa-exclamation-triangle text-warning"></i> Ce tag existe déjà
+                                        </small>
+                                        <div class="similar-tags-suggestions" style="display: none;">
+                                            <small class="form-text text-info">
+                                                <i class="fas fa-lightbulb"></i> Tags similaires :
+                                            </small>
+                                            <div class="similar-tags-list mt-1"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <button type="button" class="btn btn-outline-primary btn-sm" id="add-tag-input">
+                                    <i class="fas fa-plus"></i> Ajouter un tag
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                        <button type="submit" class="btn btn-warning">
+                            <i class="fas fa-tags"></i> Attribuer les tags
                         </button>
                     </div>
                 </form>

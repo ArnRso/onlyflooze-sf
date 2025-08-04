@@ -47,7 +47,7 @@ readonly class TagService
         return $this->tagRepository->findByUserWithTransactionCount($user);
     }
 
-    public function getTagStats(User $user): array
+    public function getUserTagStats(User $user): array
     {
         $tags = $this->getUserTags($user);
         $totalTags = count($tags);
@@ -78,6 +78,67 @@ readonly class TagService
     public function getUserTags(User $user): array
     {
         return $this->tagRepository->findByUser($user);
+    }
+
+    /**
+     * Statistiques pour un tag spécifique
+     */
+    public function getTagStats(Tag $tag): array
+    {
+        $transactions = $tag->getTransactions();
+        $totalTransactions = $transactions->count();
+        $totalAmount = 0;
+        $monthlyTotals = [];
+
+        foreach ($transactions as $transaction) {
+            $totalAmount += $transaction->getAmountAsFloat();
+
+            // Calculer les totaux par mois budgétaire
+            $budgetMonth = $transaction->getBudgetMonth();
+            if ($budgetMonth) {
+                if (!isset($monthlyTotals[$budgetMonth])) {
+                    $monthlyTotals[$budgetMonth] = 0;
+                }
+                $monthlyTotals[$budgetMonth] += $transaction->getAmountAsFloat();
+            }
+        }
+
+        $averageAmount = $totalTransactions > 0 ? $totalAmount / $totalTransactions : 0;
+
+        // Calculer la moyenne par mois budgétaire
+        $monthsCount = count($monthlyTotals);
+        $averagePerMonth = $monthsCount > 0 ? $totalAmount / $monthsCount : 0;
+
+        return [
+            'total_transactions' => $totalTransactions,
+            'total_amount' => $totalAmount,
+            'average_amount' => $averageAmount,
+            'average_per_month' => $averagePerMonth,
+            'months_count' => $monthsCount,
+        ];
+    }
+
+    /**
+     * Totaux mensuels pour un tag spécifique
+     */
+    public function getMonthlyTotalsForTag(Tag $tag): array
+    {
+        $transactions = $tag->getTransactions();
+        $monthlyTotals = [];
+
+        foreach ($transactions as $transaction) {
+            $budgetMonth = $transaction->getBudgetMonth();
+            if ($budgetMonth) {
+                if (!isset($monthlyTotals[$budgetMonth])) {
+                    $monthlyTotals[$budgetMonth] = 0;
+                }
+                $monthlyTotals[$budgetMonth] += $transaction->getAmountAsFloat();
+            }
+        }
+
+        ksort($monthlyTotals);
+
+        return $monthlyTotals;
     }
 
     public function findOrCreateTag(User $user, string $name, string $color = null): Tag
