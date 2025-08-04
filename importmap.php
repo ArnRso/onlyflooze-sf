@@ -16,6 +16,22 @@ return [
         'path' => './assets/app.js',
         'entrypoint' => true,
     ],
+    'csv-import' => [
+        'path' => './assets/csv-import.js',
+        'entrypoint' => true,
+    ],
+    'transaction-pagination' => [
+        'path' => './assets/transaction-pagination.js',
+        'entrypoint' => true,
+    ],
+    'csv-upload' => [
+        'path' => './assets/csv-upload.js',
+        'entrypoint' => true,
+    ],
+    'csv-preview' => [
+        'path' => './assets/csv-preview.js',
+        'entrypoint' => true,
+    ],
     'bootstrap' => [
         'version' => '5.3.7',
     ],

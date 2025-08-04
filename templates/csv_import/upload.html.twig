@@ -1,0 +1,117 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Importer un fichier CSV - {{ parent() }}{% endblock %}
+
+
+{% block body %}
+    <div class="container mt-4">
+        <div class="row justify-content-center">
+            <div class="col-md-8">
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="mb-0">Importer un fichier CSV</h3>
+                    </div>
+                    <div class="card-body">
+                        {% for label, messages in app.flashes %}
+                            {% for message in messages %}
+                                <div
+                                    class="alert alert-{{ label == 'error' ? 'danger' : label }} alert-dismissible fade show"
+                                    role="alert">
+                                    {{ message }}
+                                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                                </div>
+                            {% endfor %}
+                        {% endfor %}
+
+                        {{ form_start(form, {'attr': {'enctype': 'multipart/form-data'}}) }}
+
+                        <div class="mb-4">
+                            <h5>Étape 1 : Sélectionner le profil d'import</h5>
+                            <p class="text-muted small mb-3">
+                                Choisissez le profil correspondant au format de votre fichier CSV.
+                            </p>
+                            {{ form_row(form.profile) }}
+
+                            <div class="mt-2">
+                                <small class="text-muted">
+                                    Pas de profil adapté ?
+                                    <a href="{{ path('app_csv_import_profile_new') }}" target="_blank">Créer un nouveau
+                                        profil</a>
+                                </small>
+                            </div>
+                        </div>
+
+                        <div class="mb-4">
+                            <h5>Étape 2 : Sélectionner le fichier</h5>
+                            <p class="text-muted small mb-3">
+                                Choisissez le fichier CSV contenant vos transactions bancaires.
+                            </p>
+                            {{ form_row(form.file) }}
+
+                            <div class="mt-2">
+                                <small class="text-muted">
+                                    Formats acceptés : CSV, TXT • Taille maximale : 10 MB
+                                </small>
+                            </div>
+                        </div>
+
+                        <div class="alert alert-info">
+                            <h6><i class="bi bi-info-circle"></i> Information</h6>
+                            <p class="mb-0 small">
+                                Après avoir sélectionné votre fichier, vous pourrez prévisualiser les données
+                                avant de confirmer l'import. Les transactions en doublon seront automatiquement
+                                détectées et ignorées.
+                            </p>
+                        </div>
+
+                        <div class="d-flex justify-content-between">
+                            <a href="{{ path('app_csv_import_index') }}" class="btn btn-secondary">
+                                <i class="bi bi-arrow-left"></i> Retour
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-upload"></i> Analyser le fichier
+                            </button>
+                        </div>
+
+                        {{ form_end(form) }}
+                    </div>
+                </div>
+
+                <!-- Aide -->
+                <div class="card mt-4">
+                    <div class="card-header">
+                        <h5 class="mb-0">
+                            <i class="bi bi-question-circle"></i> Aide
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <h6>Formats de fichier supportés</h6>
+                                <ul class="small mb-3">
+                                    <li>Fichiers CSV (.csv)</li>
+                                    <li>Fichiers texte (.txt)</li>
+                                    <li>Séparateurs : virgule, point-virgule, tabulation</li>
+                                    <li>Encodage : UTF-8, ISO-8859-1, Windows-1252</li>
+                                </ul>
+                            </div>
+                            <div class="col-md-6">
+                                <h6>Colonnes requises</h6>
+                                <ul class="small mb-3">
+                                    <li><strong>Date</strong> : Date de la transaction</li>
+                                    <li><strong>Libellé</strong> : Description de la transaction</li>
+                                    <li><strong>Montant</strong> : Montant (ou crédit/débit séparés)</li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="alert alert-warning small mb-0">
+                            <strong>Note :</strong> Si vous n'avez pas encore de profil configuré pour votre banque,
+                            créez-en un nouveau en analysant la structure de votre fichier CSV.
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}

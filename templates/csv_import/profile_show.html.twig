@@ -1,0 +1,264 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}{{ profile.name }} - Profil CSV - {{ parent() }}{% endblock %}
+
+
+{% block body %}
+    <div class="container mt-4">
+        <div class="row">
+            <div class="col-md-12">
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h3 class="mb-0">{{ profile.name }}</h3>
+                        <div>
+                            <a href="{{ path('app_csv_import_profiles') }}" class="btn btn-outline-secondary">
+                                <i class="bi bi-arrow-left"></i> Retour
+                            </a>
+                            <a href="{{ path('app_csv_import_profile_edit', {'id': profile.id}) }}"
+                               class="btn btn-primary">
+                                <i class="bi bi-pencil"></i> Modifier
+                            </a>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        {% for label, messages in app.flashes %}
+                            {% for message in messages %}
+                                <div
+                                    class="alert alert-{{ label == 'error' ? 'danger' : label }} alert-dismissible fade show"
+                                    role="alert">
+                                    {{ message }}
+                                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                                </div>
+                            {% endfor %}
+                        {% endfor %}
+
+                        <div class="row">
+                            <!-- Informations générales -->
+                            <div class="col-md-6">
+                                <div class="card bg-light h-100">
+                                    <div class="card-header">
+                                        <h5 class="mb-0">Informations générales</h5>
+                                    </div>
+                                    <div class="card-body">
+                                        <table class="table table-borderless table-sm">
+                                            <tr>
+                                                <td><strong>Nom :</strong></td>
+                                                <td>{{ profile.name }}</td>
+                                            </tr>
+                                            {% if profile.description %}
+                                                <tr>
+                                                    <td><strong>Description :</strong></td>
+                                                    <td>{{ profile.description }}</td>
+                                                </tr>
+                                            {% endif %}
+                                            <tr>
+                                                <td><strong>Créé le :</strong></td>
+                                                <td>{{ profile.createdAt|date('d/m/Y à H:i') }}</td>
+                                            </tr>
+                                            {% if profile.updatedAt %}
+                                                <tr>
+                                                    <td><strong>Modifié le :</strong></td>
+                                                    <td>{{ profile.updatedAt|date('d/m/Y à H:i') }}</td>
+                                                </tr>
+                                            {% endif %}
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Configuration du fichier -->
+                            <div class="col-md-6">
+                                <div class="card bg-light h-100">
+                                    <div class="card-header">
+                                        <h5 class="mb-0">Configuration du fichier</h5>
+                                    </div>
+                                    <div class="card-body">
+                                        <table class="table table-borderless table-sm">
+                                            <tr>
+                                                <td><strong>Séparateur :</strong></td>
+                                                <td><code>"{{ profile.delimiter }}"</code></td>
+                                            </tr>
+                                            <tr>
+                                                <td><strong>Encodage :</strong></td>
+                                                <td>{{ profile.encoding }}</td>
+                                            </tr>
+                                            <tr>
+                                                <td><strong>Format de date :</strong></td>
+                                                <td><code>{{ profile.dateFormat }}</code></td>
+                                            </tr>
+                                            <tr>
+                                                <td><strong>En-tête :</strong></td>
+                                                <td>
+                                                <span
+                                                    class="badge bg-{{ profile.hasHeader ? 'success' : 'secondary' }}">
+                                                    {{ profile.hasHeader ? 'Présente' : 'Absente' }}
+                                                </span>
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <td><strong>Type de montant :</strong></td>
+                                                <td>
+                                                <span
+                                                    class="badge bg-{{ profile.amountType == 'single' ? 'primary' : 'info' }}">
+                                                    {{ profile.amountType == 'single' ? 'Colonne unique' : 'Crédit/Débit séparés' }}
+                                                </span>
+                                                </td>
+                                            </tr>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Mapping des colonnes -->
+                        <div class="row mt-4">
+                            <div class="col-md-12">
+                                <div class="card bg-light">
+                                    <div class="card-header">
+                                        <h5 class="mb-0">Mapping des colonnes</h5>
+                                    </div>
+                                    <div class="card-body">
+                                        {% set mapping = profile.columnMapping %}
+                                        <div class="row">
+                                            <div class="col-md-3">
+                                                <div class="text-center">
+                                                    <div class="bg-primary text-white rounded p-3 mb-2">
+                                                        <h4 class="mb-0">{{ mapping.date ?? 'N/A' }}</h4>
+                                                    </div>
+                                                    <strong>Date</strong>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-3">
+                                                <div class="text-center">
+                                                    <div class="bg-info text-white rounded p-3 mb-2">
+                                                        <h4 class="mb-0">{{ mapping.label ?? 'N/A' }}</h4>
+                                                    </div>
+                                                    <strong>Libellé</strong>
+                                                </div>
+                                            </div>
+                                            {% if profile.amountType == 'single' %}
+                                                <div class="col-md-6">
+                                                    <div class="text-center">
+                                                        <div class="bg-success text-white rounded p-3 mb-2">
+                                                            <h4 class="mb-0">{{ mapping.amount ?? 'N/A' }}</h4>
+                                                        </div>
+                                                        <strong>Montant</strong>
+                                                    </div>
+                                                </div>
+                                            {% else %}
+                                                <div class="col-md-3">
+                                                    <div class="text-center">
+                                                        <div class="bg-success text-white rounded p-3 mb-2">
+                                                            <h4 class="mb-0">{{ mapping.credit ?? 'N/A' }}</h4>
+                                                        </div>
+                                                        <strong>Crédit</strong>
+                                                    </div>
+                                                </div>
+                                                <div class="col-md-3">
+                                                    <div class="text-center">
+                                                        <div class="bg-danger text-white rounded p-3 mb-2">
+                                                            <h4 class="mb-0">{{ mapping.debit ?? 'N/A' }}</h4>
+                                                        </div>
+                                                        <strong>Débit</strong>
+                                                    </div>
+                                                </div>
+                                            {% endif %}
+                                        </div>
+                                        <div class="text-center mt-3">
+                                            <small class="text-muted">
+                                                Numéros de colonnes (la première colonne est numérotée 0)
+                                            </small>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Exemple de structure CSV -->
+                        <div class="row mt-4">
+                            <div class="col-md-12">
+                                <div class="card">
+                                    <div class="card-header">
+                                        <h5 class="mb-0">
+                                            <i class="bi bi-file-earmark-text"></i> Structure CSV attendue
+                                        </h5>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="bg-dark text-light p-3 rounded">
+                                            <code>
+                                                {% if profile.hasHeader %}
+                                                    {% set headers = [] %}
+                                                    {% for i in 0..4 %}
+                                                        {% if mapping.date == i %}
+                                                            {% set headers = headers|merge(['Date']) %}
+                                                        {% elseif mapping.label == i %}
+                                                            {% set headers = headers|merge(['Libellé']) %}
+                                                        {% elseif mapping.amount == i and profile.amountType == 'single' %}
+                                                            {% set headers = headers|merge(['Montant']) %}
+                                                        {% elseif mapping.credit == i and profile.amountType == 'split' %}
+                                                            {% set headers = headers|merge(['Crédit']) %}
+                                                        {% elseif mapping.debit == i and profile.amountType == 'split' %}
+                                                            {% set headers = headers|merge(['Débit']) %}
+                                                        {% else %}
+                                                            {% set headers = headers|merge(['Colonne' ~ i]) %}
+                                                        {% endif %}
+                                                    {% endfor %}
+                                                    {{ headers|join('"' ~ profile.delimiter ~ '"') }}<br>
+                                                {% endif %}
+                                                {% if profile.amountType == 'single' %}
+                                                    "31/12/2024"{{ profile.delimiter }}"Virement SALAIRE"{{ profile.delimiter }}"2500.00"
+                                                    <br>
+                                                    "30/12/2024"{{ profile.delimiter }}"ACHAT CB SUPERMARCHE"{{ profile.delimiter }}"-45.67"
+                                                {% else %}
+                                                    "31/12/2024"{{ profile.delimiter }}"Virement SALAIRE"{{ profile.delimiter }}"2500.00"{{ profile.delimiter }}""
+                                                    <br>
+                                                    "30/12/2024"{{ profile.delimiter }}"ACHAT CB SUPERMARCHE"{{ profile.delimiter }}""{{ profile.delimiter }}"45.67"
+                                                {% endif %}
+                                            </code>
+                                        </div>
+                                        <div class="mt-3">
+                                            <small class="text-muted">
+                                                <i class="bi bi-info-circle"></i>
+                                                Cet exemple montre la structure attendue de votre fichier CSV avec le
+                                                profil actuel.
+                                            </small>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Actions -->
+                        <div class="row mt-4">
+                            <div class="col-md-12">
+                                <div class="d-flex justify-content-between">
+                                    <div>
+                                        <a href="{{ path('app_csv_import_upload') }}" class="btn btn-success">
+                                            <i class="bi bi-upload"></i> Utiliser ce profil pour un import
+                                        </a>
+                                    </div>
+                                    <div>
+                                        <a href="{{ path('app_csv_import_profile_edit', {'id': profile.id}) }}"
+                                           class="btn btn-primary me-2">
+                                            <i class="bi bi-pencil"></i> Modifier
+                                        </a>
+                                        <form method="post"
+                                              action="{{ path('app_csv_import_profile_delete', {'id': profile.id}) }}"
+                                              style="display: inline;"
+                                              onsubmit="return confirm('Êtes-vous sûr de vouloir supprimer ce profil ?')">
+                                            <input type="hidden" name="_token"
+                                                   value="{{ csrf_token('delete' ~ profile.id) }}">
+                                            <button type="submit" class="btn btn-outline-danger">
+                                                <i class="bi bi-trash"></i> Supprimer
+                                            </button>
+                                        </form>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}

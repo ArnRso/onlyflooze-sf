@@ -1,0 +1,181 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Import CSV - {{ parent() }}{% endblock %}
+
+
+{% block body %}
+    <div class="container mt-4">
+        <div class="row">
+            <div class="col-md-12">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <div>
+                        <h1 class="h2">Import CSV</h1>
+                        <p class="text-muted">Importez facilement vos transactions bancaires depuis un fichier CSV</p>
+                    </div>
+                    <div>
+                        <a href="{{ path('app_csv_import_wizard') }}" class="btn btn-primary btn-lg">
+                            <i class="fas fa-upload"></i> Importer un fichier
+                        </a>
+                        <a href="{{ path('app_csv_import_profiles') }}" class="btn btn-outline-secondary">
+                            <i class="fas fa-cog"></i> Profils
+                        </a>
+                    </div>
+                </div>
+
+                {% for label, messages in app.flashes %}
+                    {% for message in messages %}
+                        <div class="alert alert-{{ label == 'error' ? 'danger' : label }} alert-dismissible fade show"
+                             role="alert">
+                            {{ message }}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                        </div>
+                    {% endfor %}
+                {% endfor %}
+
+                <div class="row">
+                    <!-- Statistiques -->
+                    <div class="col-md-12 mb-4">
+                        <div class="card">
+                            <div class="card-header">
+                                <h5 class="mb-0">Statistiques d'import</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="row text-center">
+                                    <div class="col-md-2">
+                                        <div class="border-end pe-3">
+                                            <h4 class="text-primary mb-0">{{ stats.total_imports }}</h4>
+                                            <small class="text-muted">Imports</small>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-2">
+                                        <div class="border-end pe-3">
+                                            <h4 class="text-info mb-0">{{ stats.total_rows_processed }}</h4>
+                                            <small class="text-muted">Lignes traitées</small>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-2">
+                                        <div class="border-end pe-3">
+                                            <h4 class="text-success mb-0">{{ stats.total_successful }}</h4>
+                                            <small class="text-muted">Importées</small>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-2">
+                                        <div class="border-end pe-3">
+                                            <h4 class="text-warning mb-0">{{ stats.total_duplicates }}</h4>
+                                            <small class="text-muted">Doublons</small>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-2">
+                                        <div class="border-end pe-3">
+                                            <h4 class="text-danger mb-0">{{ stats.total_errors }}</h4>
+                                            <small class="text-muted">Erreurs</small>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-2">
+                                        <h4 class="text-secondary mb-0">{{ profiles|length }}</h4>
+                                        <small class="text-muted">Profils</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Profils récents -->
+                    <div class="col-md-6">
+                        <div class="card">
+                            <div class="card-header d-flex justify-content-between align-items-center">
+                                <h5 class="mb-0">Mes Profils CSV</h5>
+                                <a href="{{ path('app_csv_import_profile_new') }}"
+                                   class="btn btn-sm btn-outline-primary">
+                                    Nouveau profil
+                                </a>
+                            </div>
+                            <div class="card-body">
+                                {% if profiles is empty %}
+                                    <div class="text-center text-muted py-3">
+                                        <p>Aucun profil configuré.</p>
+                                        <a href="{{ path('app_csv_import_profile_new') }}" class="btn btn-primary">
+                                            Créer votre premier profil
+                                        </a>
+                                    </div>
+                                {% else %}
+                                    <div class="list-group list-group-flush">
+                                        {% for profile in profiles %}
+                                            <div
+                                                class="list-group-item d-flex justify-content-between align-items-center">
+                                                <div>
+                                                    <h6 class="mb-1">{{ profile.name }}</h6>
+                                                    {% if profile.description %}
+                                                        <p class="mb-1 text-muted small">{{ profile.description }}</p>
+                                                    {% endif %}
+                                                    <small class="text-muted">
+                                                        Format: {{ profile.dateFormat }} • Délimiteur :
+                                                        "{{ profile.delimiter }}"
+                                                    </small>
+                                                </div>
+                                                <div class="btn-group-sm">
+                                                    <a href="{{ path('app_csv_import_profile_show', {'id': profile.id}) }}"
+                                                       class="btn btn-sm btn-outline-info">Voir</a>
+                                                    <a href="{{ path('app_csv_import_profile_edit', {'id': profile.id}) }}"
+                                                       class="btn btn-sm btn-outline-secondary">Éditer</a>
+                                                </div>
+                                            </div>
+                                        {% endfor %}
+                                    </div>
+                                    <div class="text-center mt-3">
+                                        <a href="{{ path('app_csv_import_profiles') }}"
+                                           class="btn btn-outline-primary btn-sm">
+                                            Voir tous les profils
+                                        </a>
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Imports récents -->
+                    <div class="col-md-6">
+                        <div class="card">
+                            <div class="card-header d-flex justify-content-between align-items-center">
+                                <h5 class="mb-0">Imports Récents</h5>
+                                <a href="{{ path('app_csv_import_sessions') }}" class="btn btn-sm btn-outline-primary">
+                                    Voir tout
+                                </a>
+                            </div>
+                            <div class="card-body">
+                                {% if recent_sessions is empty %}
+                                    <div class="text-center text-muted py-3">
+                                        <p>Aucun import effectué.</p>
+                                    </div>
+                                {% else %}
+                                    <div class="list-group list-group-flush">
+                                        {% for session in recent_sessions %}
+                                            <div class="list-group-item">
+                                                <div class="d-flex justify-content-between align-items-start">
+                                                    <div class="flex-grow-1">
+                                                        <h6 class="mb-1">{{ session.profile.name }}</h6>
+                                                        <p class="mb-1 small text-muted">
+                                                            {{ session.successfulImports }} importées,
+                                                            {{ session.duplicates }} doublons,
+                                                            {{ session.errors }} erreurs
+                                                        </p>
+                                                        <small
+                                                            class="text-muted">{{ session.createdAt|date('d/m/Y H:i') }}</small>
+                                                    </div>
+                                                    <span
+                                                        class="badge bg-{{ session.status == 'completed' ? 'success' : (session.status == 'failed' ? 'danger' : 'warning') }}">
+                                                    {{ session.status }}
+                                                </span>
+                                                </div>
+                                            </div>
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}

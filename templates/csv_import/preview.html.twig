@@ -1,0 +1,177 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Prévisualisation - Import CSV - {{ parent() }}{% endblock %}
+
+
+{% block body %}
+    <div class="container mt-4">
+        <div class="row">
+            <div class="col-md-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="mb-0">Prévisualisation de l'import</h3>
+                    </div>
+                    <div class="card-body">
+                        {% for label, messages in app.flashes %}
+                            {% for message in messages %}
+                                <div
+                                    class="alert alert-{{ label == 'error' ? 'danger' : label }} alert-dismissible fade show"
+                                    role="alert">
+                                    {{ message }}
+                                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                                </div>
+                            {% endfor %}
+                        {% endfor %}
+
+                        <!-- Informations sur le fichier et profil -->
+                        <div class="row mb-4">
+                            <div class="col-md-6">
+                                <div class="card bg-light">
+                                    <div class="card-body">
+                                        <h6 class="card-title">Fichier</h6>
+                                        <p class="card-text">
+                                            <strong>Nom :</strong> {{ filename }}<br>
+                                            <strong>Lignes trouvées :</strong> {{ preview.total_rows }}<br>
+                                            <strong>Lignes valides :</strong> {{ preview.valid_rows }}<br>
+                                            <strong>Erreurs :</strong> {{ preview.errors|length }}
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="card bg-light">
+                                    <div class="card-body">
+                                        <h6 class="card-title">Profil utilisé</h6>
+                                        <p class="card-text">
+                                            <strong>Nom :</strong> {{ profile.name }}<br>
+                                            <strong>Format date :</strong> {{ profile.dateFormat }}<br>
+                                            <strong>Séparateur :</strong> "{{ profile.delimiter }}"<br>
+                                            <strong>Type montant
+                                                :</strong> {{ profile.amountType == 'single' ? 'Unique' : 'Crédit/Débit' }}
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Erreurs si présentes -->
+                        {% if preview.errors is not empty %}
+                            <div class="alert alert-warning">
+                                <h6><i class="bi bi-exclamation-triangle"></i> Erreurs détectées</h6>
+                                <ul class="mb-0">
+                                    {% for error in preview.errors %}
+                                        <li>{{ error }}</li>
+                                    {% endfor %}
+                                </ul>
+                            </div>
+                        {% endif %}
+
+                        <!-- Aperçu des données -->
+                        <h5>Aperçu des données ({{ preview.sample_data|length }} premières lignes)</h5>
+                        {% if preview.sample_data is not empty %}
+                            <div class="table-responsive">
+                                <table class="table table-striped table-sm">
+                                    <thead class="table-dark">
+                                    <tr>
+                                        <th>Date</th>
+                                        <th>Libellé</th>
+                                        <th>Montant</th>
+                                        <th>Statut</th>
+                                    </tr>
+                                    </thead>
+                                    <tbody>
+                                    {% for row in preview.sample_data %}
+                                        <tr class="{{ row.status == 'error' ? 'table-danger' : (row.status == 'warning' ? 'table-warning' : '') }}">
+                                            <td>
+                                                {% if row.parsed_data.date %}
+                                                    {{ row.parsed_data.date|date('d/m/Y') }}
+                                                {% else %}
+                                                    <span class="text-muted">-</span>
+                                                {% endif %}
+                                            </td>
+                                            <td>
+                                                {{ row.parsed_data.label|default('-')|truncate(50) }}
+                                            </td>
+                                            <td>
+                                                {% if row.parsed_data.amount is defined %}
+                                                    <span
+                                                        class="badge bg-{{ row.parsed_data.amount >= 0 ? 'success' : 'danger' }}">
+                                                        {{ row.parsed_data.amount|number_format(2, ',', ' ') }}&nbsp;€
+                                                    </span>
+                                                {% else %}
+                                                    <span class="text-muted">-</span>
+                                                {% endif %}
+                                            </td>
+                                            <td>
+                                                {% if row.status == 'ok' %}
+                                                    <span class="badge bg-success">Valide</span>
+                                                {% elseif row.status == 'warning' %}
+                                                    <span class="badge bg-warning">Attention</span>
+                                                {% else %}
+                                                    <span class="badge bg-danger">Erreur</span>
+                                                {% endif %}
+                                                {% if row.message %}
+                                                    <br><small class="text-muted">{{ row.message }}</small>
+                                                {% endif %}
+                                            </td>
+                                        </tr>
+                                    {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        {% else %}
+                            <div class="alert alert-danger">
+                                <h6><i class="bi bi-x-circle"></i> Aucune donnée valide trouvée</h6>
+                                <p class="mb-0">
+                                    Impossible de parser les données du fichier avec le profil sélectionné.
+                                    Vérifiez la configuration de votre profil.
+                                </p>
+                            </div>
+                        {% endif %}
+
+                        <!-- Actions -->
+                        <div class="mt-4 d-flex justify-content-between">
+                            <form method="post" style="display: inline;">
+                                <input type="hidden" name="confirm" value="0">
+                                <button type="submit" class="btn btn-secondary">
+                                    <i class="bi bi-x-circle"></i> Annuler
+                                </button>
+                            </form>
+
+                            {% if preview.valid_rows > 0 %}
+                                <form method="post" style="display: inline;">
+                                    <input type="hidden" name="confirm" value="1">
+                                    <button type="submit" class="btn btn-success"
+                                            onclick="return confirm('Êtes-vous sûr de vouloir importer {{ preview.valid_rows }} transaction(s) ?')">
+                                        <i class="bi bi-check-circle"></i>
+                                        Confirmer l'import ({{ preview.valid_rows }}
+                                        transaction{{ preview.valid_rows > 1 ? 's' : '' }})
+                                    </button>
+                                </form>
+                            {% else %}
+                                <button type="button" class="btn btn-success" disabled>
+                                    <i class="bi bi-check-circle"></i> Aucune transaction à importer
+                                </button>
+                            {% endif %}
+                        </div>
+
+                        <!-- Informations complémentaires -->
+                        <div class="mt-4">
+                            <div class="alert alert-info">
+                                <h6><i class="bi bi-info-circle"></i> Information</h6>
+                                <ul class="mb-0 small">
+                                    <li>Les transactions en doublon seront automatiquement ignorées</li>
+                                    <li>Un doublon est défini par : même utilisateur, date, montant et libellé</li>
+                                    <li>Vous pourrez consulter le détail de l'import une fois terminé</li>
+                                    {% if preview.errors is not empty %}
+                                        <li class="text-warning">Les lignes avec erreurs seront ignorées.</li>
+                                    {% endif %}
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}

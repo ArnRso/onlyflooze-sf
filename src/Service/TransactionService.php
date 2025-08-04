@@ -8,6 +8,7 @@ use App\Entity\User;
 use App\Repository\TransactionRepository;
 use DateTimeImmutable;
 use Doctrine\ORM\EntityManagerInterface;
+use Doctrine\ORM\Query;
 
 readonly class TransactionService
 {
@@ -98,6 +99,20 @@ readonly class TransactionService
     public function getUserTransactionCount(User $user): int
     {
         return $this->transactionRepository->getCountByUser($user);
+    }
+
+    public function getUserTransactionsQuery(User $user): Query
+    {
+        return $this->entityManager->createQueryBuilder()
+            ->select('t', 'tags', 'rt')
+            ->from(Transaction::class, 't')
+            ->leftJoin('t.tags', 'tags')
+            ->leftJoin('t.recurringTransaction', 'rt')
+            ->where('t.user = :user')
+            ->setParameter('user', $user)
+            ->orderBy('t.transactionDate', 'DESC')
+            ->addOrderBy('t.createdAt', 'DESC')
+            ->getQuery();
     }
 
     /**

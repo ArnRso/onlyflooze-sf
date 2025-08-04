@@ -14,6 +14,7 @@ use Ramsey\Uuid\UuidInterface;
 
 #[ORM\Entity(repositoryClass: TransactionRepository::class)]
 #[ORM\HasLifecycleCallbacks]
+#[ORM\UniqueConstraint(name: 'unique_transaction_per_user', columns: ['user_id', 'transaction_date', 'amount', 'label'])]
 class Transaction
 {
     use TimestampableTrait;

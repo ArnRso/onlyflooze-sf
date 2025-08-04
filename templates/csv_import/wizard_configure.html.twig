@@ -1,0 +1,338 @@
+{% extends 'csv_import/base_csv.html.twig' %}
+
+{% block title %}Configuration de l'import - {{ parent() }}{% endblock %}
+
+{% block body %}
+    <div class="container-fluid mt-4">
+        <div class="row">
+            <div class="col-md-12">
+                <!-- En-tête avec progression -->
+                <div class="mb-4">
+                    <h2 class="text-center mb-3">Configuration de l'import : {{ filename }}</h2>
+                    <div class="progress" style="height: 8px;">
+                        <div class="progress-bar bg-primary" role="progressbar" style="width: 66%"></div>
+                    </div>
+                    <div class="d-flex justify-content-between mt-2">
+                        <small class="text-muted">1. Sélection du fichier</small>
+                        <small class="text-primary"><strong>2. Configuration</strong></small>
+                        <small class="text-muted">3. Import</small>
+                    </div>
+                </div>
+
+                <!-- Configuration en haut -->
+                <div class="row">
+                    <div class="col-md-12">
+                        <div class="card">
+                            <div class="card-header">
+                                <h5 class="mb-0">
+                                    <i class="fas fa-cog"></i> Configuration
+                                </h5>
+                            </div>
+                            <div class="card-body">
+                                <form method="post">
+                                    <!-- Choix : profil existant ou nouveau -->
+                                    <div class="mb-4">
+                                        <h6>Comment voulez-vous procéder ?</h6>
+
+                                        {% if existing_profiles is not empty %}
+                                            <div class="form-check mb-2">
+                                                <input class="form-check-input" type="radio" name="profile_choice"
+                                                       id="use_existing_profile" value="existing">
+                                                <label class="form-check-label" for="use_existing_profile">
+                                                    Utiliser un profil existant
+                                                </label>
+                                            </div>
+                                        {% endif %}
+
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="radio" name="profile_choice"
+                                                   id="create_new_profile" value="new" checked>
+                                            <label class="form-check-label" for="create_new_profile">
+                                                Créer un nouveau profil
+                                            </label>
+                                        </div>
+                                    </div>
+
+                                    <!-- Section profil existant -->
+                                    {% if existing_profiles is not empty %}
+                                        <div id="existing-profile-section" class="d-none mb-4">
+                                            <div class="mb-3">
+                                                <label for="profile_id" class="form-label">Sélectionner un
+                                                    profil</label>
+                                                <select class="form-select" name="profile_id" id="profile_id">
+                                                    {% for profile in existing_profiles %}
+                                                        <option value="{{ profile.id }}">{{ profile.name }}</option>
+                                                    {% endfor %}
+                                                </select>
+                                            </div>
+
+                                            <button type="submit" name="use_existing_profile" value="1"
+                                                    class="btn btn-success w-100">
+                                                Utiliser ce profil
+                                            </button>
+                                        </div>
+                                    {% endif %}
+
+                                    <!-- Section nouveau profil -->
+                                    <div id="new-profile-section">
+                                        <div class="mb-3">
+                                            <label for="profile_name" class="form-label">Nom du profil</label>
+                                            <input type="text" class="form-control" name="profile_name"
+                                                   id="profile_name"
+                                                   value="Profil {{ filename }}" required>
+                                        </div>
+
+                                        <div class="mb-3">
+                                            <label for="profile_description" class="form-label">Description
+                                                (optionnel)</label>
+                                            <textarea class="form-control" name="profile_description"
+                                                      id="profile_description" rows="2"
+                                                      placeholder="Ex: Format Crédit Agricole"></textarea>
+                                        </div>
+
+                                        <h6 class="border-bottom pb-2 mb-3">Format du fichier</h6>
+
+                                        <!-- Suggestions automatiques -->
+                                        {% if analyses is not empty %}
+                                            <div class="mb-3">
+                                                <label class="form-label">Suggestions détectées</label>
+                                                {% for analysis in analyses|slice(0, 3) %}
+                                                    <div class="border rounded p-2 mb-2 suggestion-item"
+                                                         data-delimiter="{{ analysis.delimiter }}"
+                                                         data-encoding="{{ analysis.encoding }}"
+                                                         style="cursor: pointer;">
+                                                        <div class="d-flex justify-content-between">
+                                                            <div>
+                                                                <small><strong>{{ analysis.delimiter_name }}</strong>
+                                                                    • {{ analysis.encoding }}</small><br>
+                                                                <small
+                                                                    class="text-muted">{{ analysis.analysis.column_count }}
+                                                                    colonnes, {{ analysis.analysis.total_rows }}
+                                                                    lignes</small>
+                                                            </div>
+                                                            <div class="text-end">
+                                                                <span
+                                                                    class="badge bg-primary">Score: {{ analysis.score }}</span>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                {% endfor %}
+                                            </div>
+                                        {% endif %}
+
+                                        <div class="row">
+                                            <div class="col-md-6">
+                                                <div class="mb-3">
+                                                    <label for="delimiter" class="form-label">Séparateur</label>
+                                                    <select class="form-select" name="delimiter" id="delimiter"
+                                                            data-csv-config>
+                                                        <option value=",">Virgule (,)</option>
+                                                        <option value=";"
+                                                                {% if analyses is not empty and analyses[0].delimiter == ';' %}selected{% endif %}>
+                                                            Point-virgule (;)
+                                                        </option>
+                                                        <option value="	">Tabulation</option>
+                                                    </select>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <div class="mb-3">
+                                                    <label for="encoding" class="form-label">Encodage</label>
+                                                    <select class="form-select" name="encoding" id="encoding"
+                                                            data-csv-config>
+                                                        <option value="UTF-8"
+                                                                {% if analyses is not empty and analyses[0].encoding == 'UTF-8' %}selected{% endif %}>
+                                                            UTF-8
+                                                        </option>
+                                                        <option value="ISO-8859-1"
+                                                                {% if analyses is not empty and analyses[0].encoding == 'ISO-8859-1' %}selected{% endif %}>
+                                                            ISO-8859-1
+                                                        </option>
+                                                        <option value="Windows-1252">Windows-1252</option>
+                                                    </select>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div class="mb-3">
+                                            <label for="date_format" class="form-label">Format de date</label>
+                                            <select class="form-select" name="date_format" id="date_format"
+                                                    data-csv-config>
+                                                <option value="d/m/Y">JJ/MM/AAAA (31/12/2024)</option>
+                                                <option value="Y-m-d">AAAA-MM-JJ (2024-12-31)</option>
+                                                <option value="m/d/Y">MM/JJ/AAAA (12/31/2024)</option>
+                                                <option value="d-m-Y">JJ-MM-AAAA (31-12-2024)</option>
+                                            </select>
+                                        </div>
+
+                                        <div class="row">
+                                            <div class="col-md-6">
+                                                <div class="form-check mb-3">
+                                                    <input class="form-check-input" type="checkbox" name="has_header"
+                                                           id="has_header" data-csv-config checked>
+                                                    <label class="form-check-label" for="has_header">
+                                                        Première ligne = en-têtes
+                                                    </label>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <div class="mb-3">
+                                                    <label for="amount_type" class="form-label">Type de montant</label>
+                                                    <select class="form-select" name="amount_type" id="amount_type"
+                                                            data-csv-config>
+                                                        <option value="single">Colonne unique</option>
+                                                        <option value="split">Crédit/Débit séparés</option>
+                                                    </select>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <h6 class="border-bottom pb-2 mb-3">Mapping des colonnes</h6>
+                                        <p class="small text-muted mb-3">
+                                            Cliquez sur les colonnes dans l'aperçu ou sélectionnez manuellement :
+                                        </p>
+
+                                        <div class="row">
+                                            <div class="col-md-6">
+                                                <div class="mb-3">
+                                                    <label for="date_column" class="form-label">Colonne Date</label>
+                                                    <select class="form-select" name="date_column" id="date_column"
+                                                            data-column-mapping
+                                                            required>
+                                                        {% for i in 0..10 %}
+                                                            <option value="{{ i }}">Colonne {{ i }}</option>
+                                                        {% endfor %}
+                                                    </select>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <div class="mb-3">
+                                                    <label for="label_column" class="form-label">Colonne Libellé</label>
+                                                    <select class="form-select" name="label_column" id="label_column"
+                                                            data-column-mapping
+                                                            required>
+                                                        {% for i in 0..10 %}
+                                                            <option value="{{ i }}" {% if i == 1 %}selected{% endif %}>
+                                                                Colonne {{ i }}</option>
+                                                        {% endfor %}
+                                                    </select>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div id="single-amount-section">
+                                            <div class="mb-3">
+                                                <label for="amount_column" class="form-label">Colonne Montant</label>
+                                                <select class="form-select" name="amount_column" id="amount_column"
+                                                        data-column-mapping>
+                                                    {% for i in 0..10 %}
+                                                        <option value="{{ i }}" {% if i == 2 %}selected{% endif %}>
+                                                            Colonne {{ i }}</option>
+                                                    {% endfor %}
+                                                </select>
+                                            </div>
+                                        </div>
+
+                                        <div id="split-amount-section" class="d-none">
+                                            <div class="row">
+                                                <div class="col-md-6">
+                                                    <div class="mb-3">
+                                                        <label for="credit_column" class="form-label">Colonne
+                                                            Crédit</label>
+                                                        <select class="form-select" name="credit_column"
+                                                                id="credit_column"
+                                                                data-column-mapping>
+                                                            {% for i in 0..10 %}
+                                                                <option value="{{ i }}"
+                                                                        {% if i == 2 %}selected{% endif %}>
+                                                                    Colonne {{ i }}</option>
+                                                            {% endfor %}
+                                                        </select>
+                                                    </div>
+                                                </div>
+                                                <div class="col-md-6">
+                                                    <div class="mb-3">
+                                                        <label for="debit_column" class="form-label">Colonne
+                                                            Débit</label>
+                                                        <select class="form-select" name="debit_column"
+                                                                id="debit_column"
+                                                                data-column-mapping>
+                                                            {% for i in 0..10 %}
+                                                                <option value="{{ i }}"
+                                                                        {% if i == 3 %}selected{% endif %}>
+                                                                    Colonne {{ i }}</option>
+                                                            {% endfor %}
+                                                        </select>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div class="d-flex justify-content-between">
+                                            <a href="{{ path('app_csv_import_wizard') }}"
+                                               class="btn btn-outline-secondary">
+                                                <i class="fas fa-arrow-left"></i> Retour
+                                            </a>
+                                            <button type="submit" class="btn btn-primary">
+                                                Prévisualiser l'import <i class="fas fa-arrow-right"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Prévisualisation en bas -->
+                <div class="row mt-4">
+                    <div class="col-md-12">
+                        <div class="card">
+                            <div class="card-header">
+                                <h5 class="mb-0">
+                                    <i class="fas fa-eye"></i> Aperçu en temps réel
+                                </h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="mb-3">
+                                    <div class="row text-center">
+                                        <div class="col-md-3">
+                                            <div class="badge bg-primary p-2 w-100">
+                                                <i class="fas fa-calendar"></i> Date
+                                            </div>
+                                        </div>
+                                        <div class="col-md-3">
+                                            <div class="badge bg-info p-2 w-100">
+                                                <i class="fas fa-tag"></i> Libellé
+                                            </div>
+                                        </div>
+                                        <div class="col-md-3">
+                                            <div class="badge bg-success p-2 w-100">
+                                                <i class="fas fa-euro-sign"></i> Crédit
+                                            </div>
+                                        </div>
+                                        <div class="col-md-3">
+                                            <div class="badge bg-danger p-2 w-100">
+                                                <i class="fas fa-minus"></i> Débit
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <small class="text-muted d-block text-center mt-2">
+                                        Les colonnes sélectionnées apparaissent en couleur dans l'aperçu
+                                    </small>
+                                </div>
+
+                                <div id="preview-container">
+                                    <div class="text-center text-muted py-5">
+                                        <i class="fas fa-spinner fa-spin fa-2x mb-3"></i>
+                                        <p>Chargement de l'aperçu...</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}

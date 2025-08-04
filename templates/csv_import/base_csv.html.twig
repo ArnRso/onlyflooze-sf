@@ -1,0 +1,8 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Import CSV - {{ parent() }}{% endblock %}
+
+{% block javascripts %}
+    {{ parent() }}
+    {{ importmap('csv-import') }}
+{% endblock %}

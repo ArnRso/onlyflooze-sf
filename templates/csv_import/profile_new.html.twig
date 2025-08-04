@@ -1,0 +1,140 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Nouveau profil CSV - {{ parent() }}{% endblock %}
+
+{% block javascripts %}
+    {{ parent() }}
+    {{ importmap('csv-import') }}
+{% endblock %}
+
+{% block body %}
+    <div class="container mt-4">
+        <div class="row justify-content-center">
+            <div class="col-md-10">
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="mb-0">Créer un nouveau profil CSV</h3>
+                    </div>
+                    <div class="card-body">
+                        {% for label, messages in app.flashes %}
+                            {% for message in messages %}
+                                <div
+                                    class="alert alert-{{ label == 'error' ? 'danger' : label }} alert-dismissible fade show"
+                                    role="alert">
+                                    {{ message }}
+                                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                                </div>
+                            {% endfor %}
+                        {% endfor %}
+
+                        {{ form_start(form) }}
+
+                        <div class="row">
+                            <div class="col-md-12">
+                                <h5 class="border-bottom pb-2 mb-3">Informations générales</h5>
+                            </div>
+                            <div class="col-md-6">
+                                {{ form_row(form.name) }}
+                            </div>
+                            <div class="col-md-6">
+                                {{ form_row(form.hasHeader) }}
+                            </div>
+                            <div class="col-md-12">
+                                {{ form_row(form.description) }}
+                            </div>
+                        </div>
+
+                        <div class="row mt-4">
+                            <div class="col-md-12">
+                                <h5 class="border-bottom pb-2 mb-3">Configuration du fichier</h5>
+                            </div>
+                            <div class="col-md-4">
+                                {{ form_row(form.delimiter) }}
+                            </div>
+                            <div class="col-md-4">
+                                {{ form_row(form.encoding) }}
+                            </div>
+                            <div class="col-md-4">
+                                {{ form_row(form.dateFormat) }}
+                            </div>
+                        </div>
+
+                        <div class="row mt-4">
+                            <div class="col-md-12">
+                                <h5 class="border-bottom pb-2 mb-3">Mapping des colonnes</h5>
+                                <p class="text-muted small mb-3">
+                                    Indiquez le numéro de colonne pour chaque donnée (en commençant par 0 pour la
+                                    première colonne).
+                                </p>
+                            </div>
+                            <div class="col-md-4">
+                                {{ form_row(form.dateColumn) }}
+                            </div>
+                            <div class="col-md-4">
+                                {{ form_row(form.labelColumn) }}
+                            </div>
+                            <div class="col-md-4">
+                                {{ form_row(form.amountType) }}
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-4">
+                                {{ form_row(form.amountColumn) }}
+                            </div>
+                            <div class="col-md-4">
+                                {{ form_row(form.creditColumn) }}
+                            </div>
+                            <div class="col-md-4">
+                                {{ form_row(form.debitColumn) }}
+                            </div>
+                        </div>
+
+                        <!-- Exemples -->
+                        <div class="mt-4">
+                            <div class="card bg-light">
+                                <div class="card-header">
+                                    <h6 class="mb-0">
+                                        <i class="bi bi-lightbulb"></i> Exemples de configuration
+                                    </h6>
+                                </div>
+                                <div class="card-body">
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <h6>Crédit Agricole</h6>
+                                            <div class="small">
+                                                <strong>Structure :</strong> Date;Libellé;Débit;Crédit<br>
+                                                <strong>Config :</strong> Date=0, Libellé=1, Type=Crédit/Débit, Débit=2,
+                                                Crédit=3<br>
+                                                <strong>Format date :</strong> d/m/Y, Séparateur : ;
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <h6>BNP Paribas</h6>
+                                            <div class="small">
+                                                <strong>Structure :</strong> Date, Description, Montant<br>
+                                                <strong>Config :</strong> Date=0, Libellé=1, Type=Unique, Montant=2<br>
+                                                <strong>Format date :</strong> Y-m-d, Séparateur : ,
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="d-flex justify-content-between mt-4">
+                            <a href="{{ path('app_csv_import_profiles') }}" class="btn btn-secondary">
+                                <i class="bi bi-arrow-left"></i> Retour
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-check-circle"></i> Créer le profil
+                            </button>
+                        </div>
+
+                        {{ form_end(form) }}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}
