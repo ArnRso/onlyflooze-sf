@@ -68,6 +68,18 @@
             </div>
         </div>
 
+        <!-- Graphique des totaux mensuels -->
+        {% if monthly_totals|length > 0 %}
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">📊 Évolution des totaux par mois budgétaire</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="monthlyTotalsChart" height="150"></canvas>
+                </div>
+            </div>
+        {% endif %}
+
         <!-- Transactions liées -->
         {% if recurring_transaction.transactions|length > 0 %}
             <div class="card">
@@ -157,4 +169,14 @@
             </div>
         {% endif %}
     </div>
+{% endblock %}
+
+{% block javascripts %}
+    {{ parent() }}
+    {% if monthly_totals|length > 0 %}
+        <script>
+            window.monthlyTotalsData = {{ monthly_totals|json_encode|raw }};
+        </script>
+        {{ importmap('js/recurring-transactions-chart.js') }}
+    {% endif %}
 {% endblock %}

@@ -48,14 +48,6 @@ readonly class RecurringTransactionService
         return $this->recurringTransactionRepository->findByUser($user);
     }
 
-    /**
-     * @return RecurringTransaction[]
-     */
-    public function getUserRecurringTransactionsWithTransactions(User $user): array
-    {
-        return $this->recurringTransactionRepository->findByUserWithTransactions($user);
-    }
-
     public function getUserRecurringTransactionById(User $user, UuidInterface $id): ?RecurringTransaction
     {
         return $this->recurringTransactionRepository->findByUserAndId($user, $id);
@@ -88,5 +80,55 @@ readonly class RecurringTransactionService
             'total_amount' => $totalAmount,
             'average_amount' => $averageAmount,
         ];
+    }
+
+    public function getMonthlyTotalsForRecurringTransaction(RecurringTransaction $recurringTransaction): array
+    {
+        $transactions = $recurringTransaction->getTransactions();
+        $monthlyTotals = [];
+
+        foreach ($transactions as $transaction) {
+            $budgetMonth = $transaction->getBudgetMonth();
+            if ($budgetMonth) {
+                if (!isset($monthlyTotals[$budgetMonth])) {
+                    $monthlyTotals[$budgetMonth] = 0;
+                }
+                $monthlyTotals[$budgetMonth] += $transaction->getAmountAsFloat();
+            }
+        }
+
+        ksort($monthlyTotals);
+
+        return $monthlyTotals;
+    }
+
+    public function getMonthlyTotalsForUser(User $user): array
+    {
+        $recurringTransactions = $this->getUserRecurringTransactionsWithTransactions($user);
+        $monthlyTotals = [];
+
+        foreach ($recurringTransactions as $recurringTransaction) {
+            foreach ($recurringTransaction->getTransactions() as $transaction) {
+                $budgetMonth = $transaction->getBudgetMonth();
+                if ($budgetMonth) {
+                    if (!isset($monthlyTotals[$budgetMonth])) {
+                        $monthlyTotals[$budgetMonth] = 0;
+                    }
+                    $monthlyTotals[$budgetMonth] += $transaction->getAmountAsFloat();
+                }
+            }
+        }
+
+        ksort($monthlyTotals);
+
+        return $monthlyTotals;
+    }
+
+    /**
+     * @return RecurringTransaction[]
+     */
+    public function getUserRecurringTransactionsWithTransactions(User $user): array
+    {
+        return $this->recurringTransactionRepository->findByUserWithTransactions($user);
     }
 }
