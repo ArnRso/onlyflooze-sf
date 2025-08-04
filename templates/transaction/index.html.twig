@@ -5,15 +5,125 @@
 {% block javascripts %}
     {{ parent() }}
     {{ importmap('transaction-pagination') }}
+    {{ importmap('transaction-management') }}
 {% endblock %}
 
 {% block body %}
     <div class="container py-4">
         <div class="d-flex justify-content-between align-items-center mb-4">
             <h1 class="h3 text-primary">💰 Mes Transactions</h1>
-            <a href="{{ path('app_transaction_new') }}" class="btn btn-primary">
-                <i class="fas fa-plus"></i> Nouvelle transaction
-            </a>
+            <div class="btn-group">
+                <button class="btn btn-outline-primary" type="button" data-bs-toggle="collapse"
+                        data-bs-target="#searchForm">
+                    <i class="fas fa-search"></i> Rechercher
+                </button>
+                <a href="{{ path('app_recurring_transaction_index') }}" class="btn btn-outline-secondary">
+                    <i class="fas fa-repeat"></i> Transactions récurrentes
+                </a>
+                <a href="{{ path('app_transaction_new') }}" class="btn btn-primary">
+                    <i class="fas fa-plus"></i> Nouvelle transaction
+                </a>
+            </div>
+        </div>
+
+        <!-- Formulaire de recherche repliable -->
+        <div
+            class="collapse {% if app.request.query.count > 0 and app.request.query.get('page') is empty %}show{% endif %}"
+            id="searchForm">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-search"></i> Rechercher des transactions
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <form method="GET" action="{{ path('app_transaction_index') }}">
+                        <div class="row">
+                            <div class="col-md-4 mb-3">
+                                <label for="label" class="form-label">Libellé</label>
+                                <input type="text" class="form-control" id="label" name="label"
+                                       value="{{ app.request.query.get('label', '') }}"
+                                       placeholder="Rechercher dans les libellés...">
+                            </div>
+                            <div class="col-md-2 mb-3">
+                                <label for="minAmount" class="form-label">Montant min</label>
+                                <input type="number" step="0.01" class="form-control"
+                                       id="minAmount" name="minAmount" placeholder="Ex: -100"
+                                       value="{{ app.request.query.get('minAmount', '') }}">
+                            </div>
+                            <div class="col-md-2 mb-3">
+                                <label for="maxAmount" class="form-label">Montant max</label>
+                                <input type="number" step="0.01" class="form-control"
+                                       id="maxAmount" name="maxAmount" placeholder="Ex: 100"
+                                       value="{{ app.request.query.get('maxAmount', '') }}">
+                            </div>
+                            <div class="col-md-2 mb-3">
+                                <label for="startDate" class="form-label">Date début</label>
+                                <input type="date" class="form-control" id="startDate" name="startDate"
+                                       value="{{ app.request.query.get('startDate', '') }}">
+                            </div>
+                            <div class="col-md-2 mb-3">
+                                <label for="endDate" class="form-label">Date fin</label>
+                                <input type="date" class="form-control" id="endDate" name="endDate"
+                                       value="{{ app.request.query.get('endDate', '') }}">
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-3 mb-3">
+                                <label for="budgetMonth" class="form-label">Mois budgétaire</label>
+                                <input type="text" class="form-control" id="budgetMonth"
+                                       name="budgetMonth" placeholder="Ex: 2024-01"
+                                       value="{{ app.request.query.get('budgetMonth', '') }}">
+                            </div>
+                            <div class="col-md-3 mb-3">
+                                <label for="hasRecurringTransaction" class="form-label">Transaction récurrente</label>
+                                <select class="form-select" id="hasRecurringTransaction"
+                                        name="hasRecurringTransaction">
+                                    <option value="">Toutes</option>
+                                    <option value="no"
+                                            {% if app.request.query.get('hasRecurringTransaction') == 'no' %}selected{% endif %}>
+                                        Sans transaction récurrente
+                                    </option>
+                                    <option value="yes"
+                                            {% if app.request.query.get('hasRecurringTransaction') == 'yes' %}selected{% endif %}>
+                                        Avec transaction récurrente
+                                    </option>
+                                </select>
+                            </div>
+                            <div class="col-md-3 mb-3">
+                                <label for="limit" class="form-label">Transactions par page</label>
+                                <select class="form-select" id="limit" name="limit">
+                                    <option value="10"
+                                            {% if app.request.query.get('limit', '20') == '10' %}selected{% endif %}>10
+                                    </option>
+                                    <option value="20"
+                                            {% if app.request.query.get('limit', '20') == '20' %}selected{% endif %}>20
+                                    </option>
+                                    <option value="50"
+                                            {% if app.request.query.get('limit', '20') == '50' %}selected{% endif %}>50
+                                    </option>
+                                    <option value="100"
+                                            {% if app.request.query.get('limit', '20') == '100' %}selected{% endif %}>
+                                        100
+                                    </option>
+                                </select>
+                            </div>
+                            <div class="col-md-3 mb-3 d-flex align-items-end">
+                                <div class="w-100">
+                                    <a href="{{ path('app_transaction_index') }}"
+                                       class="btn btn-outline-secondary me-2">
+                                        <i class="fas fa-eraser"></i> Effacer
+                                    </a>
+                                    <button type="submit" class="btn btn-primary">
+                                        <i class="fas fa-search"></i> Rechercher
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
         </div>
 
         <!-- Statistiques -->
@@ -56,6 +166,25 @@
             </div>
         </div>
 
+        <!-- Bouton d'attribution en masse (caché par défaut) -->
+        <div id="bulk-actions" class="alert alert-primary d-none" role="alert">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <i class="fas fa-check-square"></i>
+                    <span id="selected-count">0</span> transaction(s) sélectionnée(s)
+                </div>
+                <div>
+                    <button type="button" class="btn btn-sm btn-outline-secondary me-2" id="clear-selection">
+                        <i class="fas fa-times"></i> Désélectionner tout
+                    </button>
+                    <button type="button" class="btn btn-sm btn-success" data-bs-toggle="modal"
+                            data-bs-target="#assignModal">
+                        <i class="fas fa-tasks"></i> Attribuer à une récurrente
+                    </button>
+                </div>
+            </div>
+        </div>
+
         <!-- Liste des transactions -->
         {% if transactions.items|length > 0 %}
             <!-- Pagination du haut -->
@@ -94,14 +223,23 @@
             </div>
 
             <div class="card">
-                <div class="card-header">
+                <div class="card-header d-flex justify-content-between align-items-center">
                     <h5 class="mb-0">Liste des transactions</h5>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="select-all">
+                        <label class="form-check-label" for="select-all">
+                            Tout sélectionner
+                        </label>
+                    </div>
                 </div>
                 <div class="card-body p-0">
                     <div class="table-responsive">
                         <table class="table table-hover mb-0">
                             <thead class="table-light">
                             <tr>
+                                <th width="50">
+                                    <i class="fas fa-check-square text-muted"></i>
+                                </th>
                                 <th>Date</th>
                                 <th>Libellé</th>
                                 <th class="text-end">Montant</th>
@@ -116,11 +254,25 @@
                             {% for transaction in transactions.items %}
                                 <tr>
                                     <td>
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox"
+                                                   name="transaction_ids[]"
+                                                   value="{{ transaction.id }}"
+                                                   id="transaction_{{ transaction.id }}">
+                                        </div>
+                                    </td>
+                                    <td>
                                         <small
                                             class="text-muted">{{ transaction.transactionDate|date('d/m/Y') }}</small>
                                     </td>
                                     <td>
                                         <strong>{{ transaction.label }}</strong>
+                                        {% if transaction.info %}
+                                            <br>
+                                            <small class="text-muted">
+                                                {{ transaction.info|slice(0, 80) }}{% if transaction.info|length > 80 %}...{% endif %}
+                                            </small>
+                                        {% endif %}
                                     </td>
                                     <td class="text-end">
                                         <span
@@ -137,11 +289,9 @@
                                     </td>
                                     <td>
                                         {% if transaction.recurringTransaction %}
-                                            <a href="{{ path('app_recurring_transaction_show', {'id': transaction.recurringTransaction.id}) }}"
-                                               class="badge bg-primary text-decoration-none"
-                                               title="{{ transaction.recurringTransaction.name }}">
-                                                🔄 {{ transaction.recurringTransaction.name|slice(0, 15) }}{% if transaction.recurringTransaction.name|length > 15 %}...{% endif %}
-                                            </a>
+                                            <span class="badge bg-primary text-white">
+                                                🔄 {{ transaction.recurringTransaction.name }}
+                                            </span>
                                         {% else %}
                                             <small class="text-muted">-</small>
                                         {% endif %}
@@ -152,7 +302,7 @@
                                                 {% include 'components/tag.html.twig' with {
                                                     'tag': tag,
                                                     'size': 'sm',
-                                                    'class': 'me-1'
+                                                    'class': 'me-1 mb-1'
                                                 } %}
                                             {% endfor %}
                                         {% else %}
@@ -240,4 +390,64 @@
             </div>
         {% endif %}
     </div>
+
+    <!-- Modal d'attribution en masse -->
+    <div class="modal fade" id="assignModal" tabindex="-1" aria-labelledby="assignModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <form method="POST" action="{{ path('app_transaction_assign_recurring') }}" id="assign-form">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="assignModalLabel">
+                            <i class="fas fa-tasks"></i> Attribution en masse
+                        </h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <input type="hidden" name="_token" value="{{ csrf_token('assign_recurring') }}">
+
+                        <!-- Inclure les critères de recherche pour revenir aux mêmes résultats -->
+                        {% for key, value in app.request.query.all %}
+                            <input type="hidden" name="search_{{ key }}" value="{{ value }}">
+                        {% endfor %}
+
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle"></i>
+                            <strong>Instructions :</strong> Vous êtes sur le point d'attribuer <span
+                                id="modal-selected-count">0</span> transaction(s) à une transaction récurrente.
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="recurring_transaction_id" class="form-label">Transaction récurrente</label>
+                                <select class="form-select" id="recurring_transaction_id"
+                                        name="recurring_transaction_id" required
+                                        onchange="toggleNewRecurringField(this)">
+                                    <option value="">Sélectionner une transaction récurrente</option>
+                                    {% for recurring in recurringTransactions %}
+                                        <option value="{{ recurring.id }}">{{ recurring.name }}
+                                            ({{ recurring.transactions|length }} transactions)
+                                        </option>
+                                    {% endfor %}
+                                    <option value="new">➕ Créer une nouvelle transaction récurrente</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6 mb-3 d-none" id="new-recurring-name-group">
+                                <label for="new_recurring_name" class="form-label">Nom de la nouvelle transaction
+                                    récurrente</label>
+                                <input type="text" class="form-control" id="new_recurring_name"
+                                       name="new_recurring_name" placeholder="Ex: Salaire mensuel">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                        <button type="submit" class="btn btn-success">
+                            <i class="fas fa-check"></i> Attribuer les transactions
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
 {% endblock %}

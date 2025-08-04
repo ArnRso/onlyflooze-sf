@@ -1,0 +1,26 @@
+{% for type, messages in app.flashes %}
+    {% set alertClass = 'alert-info' %}
+    {% if type == 'success' %}
+        {% set alertClass = 'alert-success' %}
+    {% elseif type == 'error' %}
+        {% set alertClass = 'alert-danger' %}
+    {% elseif type == 'warning' %}
+        {% set alertClass = 'alert-warning' %}
+    {% endif %}
+
+    {% for message in messages %}
+        <div class="alert {{ alertClass }} alert-dismissible fade show" role="alert">
+            {% if type == 'success' %}
+                <i class="fas fa-check-circle"></i>
+            {% elseif type == 'error' %}
+                <i class="fas fa-exclamation-triangle"></i>
+            {% elseif type == 'warning' %}
+                <i class="fas fa-exclamation-circle"></i>
+            {% else %}
+                <i class="fas fa-info-circle"></i>
+            {% endif %}
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    {% endfor %}
+{% endfor %}

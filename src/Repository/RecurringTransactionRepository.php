@@ -31,6 +31,22 @@ class RecurringTransactionRepository extends ServiceEntityRepository
             ->getResult();
     }
 
+    /**
+     * @return RecurringTransaction[]
+     */
+    public function findByUserWithTransactions(User $user): array
+    {
+        return $this->createQueryBuilder('rt')
+            ->leftJoin('rt.transactions', 't')
+            ->addSelect('t')
+            ->where('rt.user = :user')
+            ->setParameter('user', $user)
+            ->orderBy('rt.name', 'ASC')
+            ->addOrderBy('t.transactionDate', 'DESC')
+            ->getQuery()
+            ->getResult();
+    }
+
     public function findByUserAndId(User $user, UuidInterface $id): ?RecurringTransaction
     {
         return $this->createQueryBuilder('rt')
@@ -38,6 +54,21 @@ class RecurringTransactionRepository extends ServiceEntityRepository
             ->andWhere('rt.id = :id')
             ->setParameter('user', $user)
             ->setParameter('id', $id)
+            ->getQuery()
+            ->getOneOrNullResult();
+    }
+
+    public function findByUserAndIdWithTransactionsAndTags(User $user, UuidInterface $id): ?RecurringTransaction
+    {
+        return $this->createQueryBuilder('rt')
+            ->leftJoin('rt.transactions', 't')
+            ->leftJoin('t.tags', 'tag')
+            ->addSelect('t', 'tag')
+            ->where('rt.user = :user')
+            ->andWhere('rt.id = :id')
+            ->setParameter('user', $user)
+            ->setParameter('id', $id)
+            ->orderBy('t.transactionDate', 'DESC')
             ->getQuery()
             ->getOneOrNullResult();
     }
