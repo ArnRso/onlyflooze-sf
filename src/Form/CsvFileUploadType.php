@@ -9,6 +9,9 @@ use Symfony\Component\OptionsResolver\OptionsResolver;
 use Symfony\Component\Validator\Constraints\File;
 use Symfony\Component\Validator\Constraints\NotBlank;
 
+/**
+ * @extends AbstractType<array{file: mixed}>
+ */
 class CsvFileUploadType extends AbstractType
 {
     public function buildForm(FormBuilderInterface $builder, array $options): void

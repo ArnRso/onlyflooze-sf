@@ -3,9 +3,11 @@
 namespace App\Controller;
 
 use App\Entity\RecurringTransaction;
+use App\Entity\User;
 use App\Form\RecurringTransactionType;
 use App\Security\Voter\RecurringTransactionVoter;
 use App\Service\RecurringTransactionService;
+use DateMalformedStringException;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -25,6 +27,7 @@ class RecurringTransactionController extends AbstractController
     #[Route('/', name: 'app_recurring_transaction_index', methods: ['GET'])]
     public function index(): Response
     {
+        /** @var User $user */
         $user = $this->getUser();
         $recurringTransactions = $this->recurringTransactionService->getUserRecurringTransactionsWithTransactions($user);
         $monthlyTotals = $this->recurringTransactionService->getMonthlyTotalsForUser($user);
@@ -35,9 +38,13 @@ class RecurringTransactionController extends AbstractController
         ]);
     }
 
+    /**
+     * @throws DateMalformedStringException
+     */
     #[Route('/monthly-recap', name: 'app_recurring_transaction_monthly_recap', methods: ['GET'])]
     public function monthlyRecap(Request $request): Response
     {
+        /** @var User $user */
         $user = $this->getUser();
         $selectedMonth = $request->query->get('month', date('Y-m'));
 
@@ -57,7 +64,9 @@ class RecurringTransactionController extends AbstractController
         $form->handleRequest($request);
 
         if ($form->isSubmitted() && $form->isValid()) {
-            $this->recurringTransactionService->createRecurringTransaction($recurringTransaction, $this->getUser());
+            /** @var User $user */
+            $user = $this->getUser();
+            $this->recurringTransactionService->createRecurringTransaction($recurringTransaction, $user);
 
             $this->addFlash('success', 'Transaction récurrente créée avec succès.');
 
@@ -76,9 +85,15 @@ class RecurringTransactionController extends AbstractController
         $this->denyAccessUnlessGranted(RecurringTransactionVoter::VIEW, $recurringTransaction);
 
         // Recharger avec les transactions et tags pour éviter les requêtes N+1
+        /** @var User $user */
+        $user = $this->getUser();
+        $recurringTransactionId = $recurringTransaction->getId();
+        if ($recurringTransactionId === null) {
+            throw $this->createNotFoundException('Transaction récurrente introuvable.');
+        }
         $recurringTransactionWithData = $this->recurringTransactionService->getUserRecurringTransactionByIdWithTransactionsAndTags(
-            $this->getUser(),
-            $recurringTransaction->getId()
+            $user,
+            $recurringTransactionId
         );
 
         if (!$recurringTransactionWithData) {

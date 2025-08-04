@@ -55,6 +55,9 @@ class CsvImportSessionRepository extends ServiceEntityRepository
             ->getResult();
     }
 
+    /**
+     * @return array{total_imports: int, total_rows_processed: int, total_successful: int, total_duplicates: int, total_errors: int}
+     */
     public function getImportStats(User $user): array
     {
         $result = $this->createQueryBuilder('s')

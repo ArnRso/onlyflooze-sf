@@ -42,6 +42,9 @@ readonly class CsvProfileService
         return $this->csvImportProfileRepository->findByUserAndId($user, $id);
     }
 
+    /**
+     * @return array<CsvImportProfile>
+     */
     public function createDefaultProfiles(User $user): array
     {
         $profiles = [];
@@ -111,6 +114,9 @@ readonly class CsvProfileService
         return $profile;
     }
 
+    /**
+     * @return array<string, string>
+     */
     public function getAvailableDateFormats(): array
     {
         return [
@@ -123,6 +129,9 @@ readonly class CsvProfileService
         ];
     }
 
+    /**
+     * @return array<string, string>
+     */
     public function getAvailableDelimiters(): array
     {
         return [
@@ -133,6 +142,9 @@ readonly class CsvProfileService
         ];
     }
 
+    /**
+     * @return array<string, string>
+     */
     public function getAvailableEncodings(): array
     {
         return [
@@ -142,6 +154,9 @@ readonly class CsvProfileService
         ];
     }
 
+    /**
+     * @return array<string, string>
+     */
     public function getAmountTypes(): array
     {
         return [
@@ -150,6 +165,10 @@ readonly class CsvProfileService
         ];
     }
 
+    /**
+     * @param array<string, mixed> $mapping
+     * @return array<string>
+     */
     public function validateProfileMapping(array $mapping, string $amountType): array
     {
         $errors = [];

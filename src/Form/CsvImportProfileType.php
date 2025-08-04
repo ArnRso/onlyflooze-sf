@@ -15,6 +15,9 @@ use Symfony\Component\OptionsResolver\OptionsResolver;
 use Symfony\Component\Validator\Constraints\NotBlank;
 use Symfony\Component\Validator\Constraints\Range;
 
+/**
+ * @extends AbstractType<CsvImportProfile>
+ */
 class CsvImportProfileType extends AbstractType
 {
     public function __construct(private readonly CsvProfileService $csvProfileService)

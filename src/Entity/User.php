@@ -103,7 +103,7 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
      */
     public function getUserIdentifier(): string
     {
-        return (string)$this->email;
+        return $this->email ?: 'unknown';
     }
 
     /**
@@ -323,7 +323,7 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     public function __serialize(): array
     {
         $data = (array)$this;
-        $data["\0" . self::class . "\0password"] = hash('crc32c', $this->password);
+        $data["\0" . self::class . "\0password"] = hash('crc32c', $this->password ?? '');
 
         return $data;
     }

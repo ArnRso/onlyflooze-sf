@@ -7,6 +7,9 @@ use App\Entity\User;
 use Symfony\Component\Security\Core\Authentication\Token\TokenInterface;
 use Symfony\Component\Security\Core\Authorization\Voter\Voter;
 
+/**
+ * @extends Voter<string, CsvImportProfile>
+ */
 class CsvImportProfileVoter extends Voter
 {
     public const string VIEW = 'CSV_IMPORT_PROFILE_VIEW';

@@ -6,7 +6,6 @@ use App\Entity\CsvImportProfile;
 use App\Entity\CsvImportSession;
 use App\Entity\Transaction;
 use App\Entity\User;
-use Doctrine\DBAL\Exception\UniqueConstraintViolationException;
 use Doctrine\ORM\EntityManagerInterface;
 use Exception;
 
@@ -61,6 +60,10 @@ readonly class TransactionImportService
         return $session;
     }
 
+    /**
+     * @param array<int, array<string, mixed>> $csvData
+     * @return array{success: int, duplicates: int, errors: int, error_details: array<array{row: int, message: mixed, data: mixed}>}
+     */
     private function processImportData(array $csvData, User $user): array
     {
         $results = [
@@ -96,8 +99,6 @@ readonly class TransactionImportService
 
                 $results['success']++;
 
-            } catch (UniqueConstraintViolationException $e) {
-                $results['duplicates']++;
             } catch (Exception $e) {
                 $results['errors']++;
                 $results['error_details'][] = [
@@ -114,6 +115,9 @@ readonly class TransactionImportService
         return $results;
     }
 
+    /**
+     * @param array<string, mixed> $rowData
+     */
     private function createTransactionFromRowData(array $rowData, User $user): Transaction
     {
         $transaction = new Transaction();
@@ -142,6 +146,9 @@ readonly class TransactionImportService
         return $existingTransaction !== null;
     }
 
+    /**
+     * @return array{total_rows: int, valid_rows: int, sample_data: array<int, array<string, mixed>>, errors: array<string>, success: bool}
+     */
     public function previewCsvData(string $filePath, CsvImportProfile $profile, int $limit = 10): array
     {
         try {
@@ -163,7 +170,7 @@ readonly class TransactionImportService
 
             // Second pass: create sample data for preview (limited)
             $sampleData = [];
-            foreach (array_slice($csvData, 0, $limit) as $index => $rowData) {
+            foreach (array_slice($csvData, 0, $limit) as $rowData) {
                 $rowResult = [
                     'raw_data' => $rowData['raw_data'] ?? [],
                     'parsed_data' => [],
@@ -204,6 +211,9 @@ readonly class TransactionImportService
         }
     }
 
+    /**
+     * @return array{errors: array<string>, valid: bool}
+     */
     public function validateCsvFile(string $filePath): array
     {
         $errors = [];
@@ -226,7 +236,7 @@ readonly class TransactionImportService
         }
 
         // Test opening the file and validate format
-        $handle = fopen($filePath, 'r');
+        $handle = fopen($filePath, 'rb');
         if ($handle === false) {
             $errors[] = "Impossible d'ouvrir le fichier CSV";
         } else {
@@ -240,11 +250,9 @@ readonly class TransactionImportService
                 $allowedExtensions = ['csv', 'txt'];
                 $hasValidExtension = isset($fileInfo['extension']) && in_array(strtolower($fileInfo['extension']), $allowedExtensions);
 
-                if (!$hasValidExtension) {
-                    // Check if file content looks like CSV (contains common separators)
-                    if (!(strpos($firstLine, ',') !== false || strpos($firstLine, ';') !== false || strpos($firstLine, "\t") !== false)) {
-                        $errors[] = "Le fichier doit être au format CSV ou TXT (aucun séparateur détecté)";
-                    }
+                // Check if file content looks like CSV (contains common separators)
+                if (!$hasValidExtension && !(str_contains($firstLine, ',') || str_contains($firstLine, ';') || str_contains($firstLine, "\t"))) {
+                    $errors[] = "Le fichier doit être au format CSV ou TXT (aucun séparateur détecté)";
                 }
             }
             fclose($handle);
