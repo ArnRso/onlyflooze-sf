@@ -35,6 +35,20 @@ class RecurringTransactionController extends AbstractController
         ]);
     }
 
+    #[Route('/monthly-recap', name: 'app_recurring_transaction_monthly_recap', methods: ['GET'])]
+    public function monthlyRecap(Request $request): Response
+    {
+        $user = $this->getUser();
+        $selectedMonth = $request->query->get('month', date('Y-m'));
+
+        $monthlyData = $this->recurringTransactionService->getMonthlyRecapData($user, $selectedMonth);
+
+        return $this->render('recurring_transaction/monthly_recap.html.twig', [
+            'monthly_data' => $monthlyData,
+            'selected_month' => $selectedMonth,
+        ]);
+    }
+
     #[Route('/new', name: 'app_recurring_transaction_new', methods: ['GET', 'POST'])]
     public function new(Request $request): Response
     {
