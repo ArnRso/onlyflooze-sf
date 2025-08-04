@@ -5,6 +5,7 @@ namespace App\Controller;
 use App\Entity\RecurringTransaction;
 use App\Entity\Tag;
 use App\Entity\Transaction;
+use App\Entity\User;
 use App\Form\TransactionType;
 use App\Repository\RecurringTransactionRepository;
 use App\Repository\TagRepository;
@@ -12,6 +13,7 @@ use App\Security\Voter\TransactionVoter;
 use App\Service\RecurringTransactionService;
 use App\Service\TagService;
 use App\Service\TransactionService;
+use DateMalformedStringException;
 use Exception;
 use Knp\Component\Pager\PaginatorInterface;
 use Ramsey\Uuid\Uuid;
@@ -36,9 +38,13 @@ class TransactionController extends AbstractController
     {
     }
 
+    /**
+     * @throws DateMalformedStringException
+     */
     #[Route('/', name: 'app_transaction_index', methods: ['GET'])]
     public function index(Request $request): Response
     {
+        /** @var User $user */
         $user = $this->getUser();
         $recurringTransactions = $this->recurringTransactionService->getUserRecurringTransactionsWithCount($user);
         $tags = $this->tagRepository->findByUserWithTransactionCount($user);
@@ -79,7 +85,9 @@ class TransactionController extends AbstractController
         );
 
         // Preserve the limit parameter in pagination links
-        $transactions->setParam('limit', $limit);
+        if (method_exists($transactions, 'setParam')) {
+            $transactions->setParam('limit', $limit);
+        }
 
         $stats = $this->transactionService->getUserTransactionStats($user);
 
@@ -99,7 +107,9 @@ class TransactionController extends AbstractController
         $form->handleRequest($request);
 
         if ($form->isSubmitted() && $form->isValid()) {
-            $this->transactionService->createTransaction($transaction, $this->getUser());
+            /** @var User $user */
+            $user = $this->getUser();
+            $this->transactionService->createTransaction($transaction, $user);
 
             $this->addFlash('success', 'Transaction créée avec succès.');
 
@@ -162,11 +172,13 @@ class TransactionController extends AbstractController
     public function assignRecurring(Request $request): Response
     {
         // Vérifier le token CSRF
-        if (!$this->isCsrfTokenValid('assign_recurring', $request->request->get('_token'))) {
+        $token = $request->request->get('_token');
+        if (!$this->isCsrfTokenValid('assign_recurring', is_string($token) ? $token : null)) {
             $this->addFlash('error', 'Token CSRF invalide.');
             return $this->redirectToRoute('app_transaction_index');
         }
 
+        /** @var User $user */
         $user = $this->getUser();
         $transactionIds = $request->request->all('transaction_ids');
         $recurringTransactionId = $request->request->get('recurring_transaction_id');
@@ -181,7 +193,7 @@ class TransactionController extends AbstractController
 
             if ($recurringTransactionId && $recurringTransactionId !== 'new') {
                 // Valider l'UUID
-                if (!Uuid::isValid($recurringTransactionId)) {
+                if (!is_string($recurringTransactionId) || !Uuid::isValid($recurringTransactionId)) {
                     $this->addFlash('error', 'Identifiant de transaction récurrente invalide.');
                     return $this->redirectToRoute('app_transaction_index');
                 }
@@ -193,7 +205,7 @@ class TransactionController extends AbstractController
                 }
             } elseif ($newRecurringName) {
                 $recurringTransaction = new RecurringTransaction();
-                $recurringTransaction->setName($newRecurringName);
+                $recurringTransaction->setName(is_string($newRecurringName) ? $newRecurringName : '');
                 $this->recurringTransactionService->createRecurringTransaction($recurringTransaction, $user);
             } else {
                 $this->addFlash('error', 'Veuillez sélectionner ou créer une transaction récurrente.');
@@ -240,15 +252,17 @@ class TransactionController extends AbstractController
     public function assignTags(Request $request): Response
     {
         // Vérifier le token CSRF
-        if (!$this->isCsrfTokenValid('assign_tags', $request->request->get('_token'))) {
+        $token = $request->request->get('_token');
+        if (!$this->isCsrfTokenValid('assign_tags', is_string($token) ? $token : null)) {
             $this->addFlash('error', 'Token CSRF invalide.');
             return $this->redirectToRoute('app_transaction_index');
         }
 
+        /** @var User $user */
         $user = $this->getUser();
         $transactionIds = $request->request->all('transaction_ids');
-        $existingTagIds = $request->request->all('existing_tags') ?? [];
-        $newTags = $request->request->all('new_tags') ?? [];
+        $existingTagIds = $request->request->all('existing_tags');
+        $newTags = $request->request->all('new_tags');
 
         if (empty($transactionIds)) {
             $this->addFlash('error', 'Aucune transaction sélectionnée.');

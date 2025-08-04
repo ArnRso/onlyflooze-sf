@@ -19,6 +19,9 @@ use Symfony\Component\OptionsResolver\OptionsResolver;
 use Symfony\Component\Validator\Constraints\NotBlank;
 use Symfony\Component\Validator\Constraints\Regex;
 
+/**
+ * @extends AbstractType<Transaction>
+ */
 class TransactionType extends AbstractType
 {
     public function __construct(

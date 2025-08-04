@@ -65,14 +65,19 @@ class TagRepository extends ServiceEntityRepository
 
     public function countByUser(User $user): int
     {
-        return $this->createQueryBuilder('t')
+        $result = $this->createQueryBuilder('t')
             ->select('COUNT(t.id)')
             ->andWhere('t.user = :user')
             ->setParameter('user', $user)
             ->getQuery()
             ->getSingleScalarResult();
+
+        return (int)$result;
     }
 
+    /**
+     * @return array<int, array{0: Tag, transactionCount: int}>
+     */
     public function findByUserWithTransactionCount(User $user): array
     {
         return $this->createQueryBuilder('t')

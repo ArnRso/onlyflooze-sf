@@ -82,11 +82,13 @@ class TransactionRepository extends ServiceEntityRepository
 
     public function getCountByUser(User $user): int
     {
-        return $this->createQueryBuilder('t')
+        $result = $this->createQueryBuilder('t')
             ->select('COUNT(t.id)')
             ->andWhere('t.user = :user')
             ->setParameter('user', $user)
             ->getQuery()
             ->getSingleScalarResult();
+
+        return (int)$result;
     }
 }

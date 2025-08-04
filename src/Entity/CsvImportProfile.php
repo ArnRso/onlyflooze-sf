@@ -39,6 +39,9 @@ class CsvImportProfile
     #[ORM\Column(length: 20)]
     private string $encoding = 'UTF-8';
 
+    /**
+     * @var array<string, int>
+     */
     #[ORM\Column(type: Types::JSON)]
     private array $columnMapping = [];
 
@@ -127,11 +130,17 @@ class CsvImportProfile
         return $this;
     }
 
+    /**
+     * @return array<string, int>
+     */
     public function getColumnMapping(): array
     {
         return $this->columnMapping;
     }
 
+    /**
+     * @param array<string, int> $columnMapping
+     */
     public function setColumnMapping(array $columnMapping): static
     {
         $this->columnMapping = $columnMapping;

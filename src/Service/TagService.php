@@ -42,11 +42,17 @@ readonly class TagService
         return $this->tagRepository->countByUser($user);
     }
 
+    /**
+     * @return array<int, array{0: Tag, transactionCount: int}>
+     */
     public function getUserTagsWithTransactionCount(User $user): array
     {
         return $this->tagRepository->findByUserWithTransactionCount($user);
     }
 
+    /**
+     * @return array{total_tags: int, tags_with_transactions: int, tags_without_transactions: int, total_transactions: int, average_transactions_per_tag: float|int}
+     */
     public function getUserTagStats(User $user): array
     {
         $tags = $this->getUserTags($user);
@@ -82,6 +88,7 @@ readonly class TagService
 
     /**
      * Statistiques pour un tag spécifique
+     * @return array{total_transactions: int, total_amount: float, average_amount: float, average_per_month: float, months_count: int}
      */
     public function getTagStats(Tag $tag): array
     {
@@ -120,6 +127,7 @@ readonly class TagService
 
     /**
      * Totaux mensuels pour un tag spécifique
+     * @return array<string, float>
      */
     public function getMonthlyTotalsForTag(Tag $tag): array
     {
@@ -141,7 +149,7 @@ readonly class TagService
         return $monthlyTotals;
     }
 
-    public function findOrCreateTag(User $user, string $name, string $color = null): Tag
+    public function findOrCreateTag(User $user, string $name, ?string $color = null): Tag
     {
         $existingTags = $this->tagRepository->findBy(['user' => $user, 'name' => $name]);
 

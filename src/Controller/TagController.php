@@ -3,6 +3,7 @@
 namespace App\Controller;
 
 use App\Entity\Tag;
+use App\Entity\User;
 use App\Form\TagType;
 use App\Security\Voter\TagVoter;
 use App\Service\TagService;
@@ -25,6 +26,7 @@ class TagController extends AbstractController
     #[Route('/', name: 'app_tag_index', methods: ['GET'])]
     public function index(): Response
     {
+        /** @var User $user */
         $user = $this->getUser();
         $tags = $this->tagService->getUserTagsWithTransactionCount($user);
         $stats = $this->tagService->getUserTagStats($user);
@@ -38,12 +40,14 @@ class TagController extends AbstractController
     #[Route('/new', name: 'app_tag_new', methods: ['GET', 'POST'])]
     public function new(Request $request): Response
     {
-        $tag = $this->tagService->initializeNewTag($this->getUser());
+        /** @var User $user */
+        $user = $this->getUser();
+        $tag = $this->tagService->initializeNewTag($user);
         $form = $this->createForm(TagType::class, $tag);
         $form->handleRequest($request);
 
         if ($form->isSubmitted() && $form->isValid()) {
-            $this->tagService->createTag($tag, $this->getUser());
+            $this->tagService->createTag($tag, $user);
 
             $this->addFlash('success', 'Tag créé avec succès.');
 

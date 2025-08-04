@@ -7,6 +7,7 @@ use App\Entity\Tag;
 use App\Entity\Transaction;
 use App\Entity\User;
 use App\Repository\TransactionRepository;
+use DateMalformedStringException;
 use DateTimeImmutable;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\Query;
@@ -52,6 +53,9 @@ readonly class TransactionService
         return $this->transactionRepository->findByUserAndDateRange($user, $startDate, $endDate);
     }
 
+    /**
+     * @return array{total: float, count: int, positive_total: float, negative_total: float, positive_count: int, negative_count: int, average: float}
+     */
     public function getUserTransactionStats(User $user): array
     {
         $transactions = $this->getUserTransactions($user);
@@ -103,6 +107,9 @@ readonly class TransactionService
         return $this->transactionRepository->getCountByUser($user);
     }
 
+    /**
+     * @return Query<mixed, Transaction>
+     */
     public function getUserTransactionsQuery(User $user): Query
     {
         return $this->entityManager->createQueryBuilder()
@@ -207,6 +214,11 @@ readonly class TransactionService
         return $summary;
     }
 
+    /**
+     * @param array<string, mixed> $criteria
+     * @return Query<mixed, Transaction>
+     * @throws DateMalformedStringException
+     */
     public function searchUserTransactions(User $user, array $criteria = []): Query
     {
         $qb = $this->entityManager->createQueryBuilder()
@@ -282,6 +294,9 @@ readonly class TransactionService
         return $qb->getQuery();
     }
 
+    /**
+     * @param array<string> $transactionIds
+     */
     public function assignTransactionsToRecurring(array $transactionIds, RecurringTransaction $recurringTransaction): int
     {
         // Convertir les strings en UUID

@@ -44,6 +44,9 @@ class CsvImportSession
     #[ORM\Column]
     private int $errors = 0;
 
+    /**
+     * @var array<array{row: int, message: mixed, data: mixed}>|null
+     */
     #[ORM\Column(type: Types::JSON, nullable: true)]
     private ?array $errorDetails = null;
 
@@ -142,11 +145,17 @@ class CsvImportSession
         return $this;
     }
 
+    /**
+     * @return array<array{row: int, message: mixed, data: mixed}>|null
+     */
     public function getErrorDetails(): ?array
     {
         return $this->errorDetails;
     }
 
+    /**
+     * @param array<array{row: int, message: mixed, data: mixed}>|null $errorDetails
+     */
     public function setErrorDetails(?array $errorDetails): static
     {
         $this->errorDetails = $errorDetails;
