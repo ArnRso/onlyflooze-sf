@@ -32,6 +32,10 @@ return [
         'path' => './assets/csv-preview.js',
         'entrypoint' => true,
     ],
+    'transaction-management' => [
+        'path' => './assets/transaction-management.js',
+        'entrypoint' => true,
+    ],
     'bootstrap' => [
         'version' => '5.3.7',
     ],

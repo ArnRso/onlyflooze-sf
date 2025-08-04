@@ -60,6 +60,11 @@
 </nav>
 
 <main>
+    <!-- Flash Messages Global (statiques + HTMX) -->
+    <div id="flash-messages-container" class="m-3">
+        {% include '_flash_messages.html.twig' %}
+    </div>
+
     {% block body %}{% endblock %}
 </main>
 

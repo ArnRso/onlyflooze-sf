@@ -2,11 +2,16 @@
 
 namespace App\Controller;
 
+use App\Entity\RecurringTransaction;
 use App\Entity\Transaction;
 use App\Form\TransactionType;
+use App\Repository\RecurringTransactionRepository;
 use App\Security\Voter\TransactionVoter;
+use App\Service\RecurringTransactionService;
 use App\Service\TransactionService;
+use Exception;
 use Knp\Component\Pager\PaginatorInterface;
+use Ramsey\Uuid\Uuid;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -18,8 +23,10 @@ use Symfony\Component\Security\Http\Attribute\IsGranted;
 class TransactionController extends AbstractController
 {
     public function __construct(
-        private readonly TransactionService $transactionService,
-        private readonly PaginatorInterface $paginator
+        private readonly TransactionService             $transactionService,
+        private readonly RecurringTransactionService    $recurringTransactionService,
+        private readonly PaginatorInterface             $paginator,
+        private readonly RecurringTransactionRepository $recurringTransactionRepository
     )
     {
     }
@@ -28,6 +35,7 @@ class TransactionController extends AbstractController
     public function index(Request $request): Response
     {
         $user = $this->getUser();
+        $recurringTransactions = $this->recurringTransactionRepository->findByUser($user);
 
         // Get limit from query parameter (default: 20, allowed: 10, 20, 50, 100)
         $limit = $request->query->getInt('limit', 20);
@@ -36,8 +44,26 @@ class TransactionController extends AbstractController
             $limit = 20;
         }
 
-        // Get paginated transactions
-        $query = $this->transactionService->getUserTransactionsQuery($user);
+        // Check if search criteria are present
+        $searchCriteria = [
+            'label' => $request->query->get('label', ''),
+            'minAmount' => $request->query->get('minAmount', ''),
+            'maxAmount' => $request->query->get('maxAmount', ''),
+            'startDate' => $request->query->get('startDate', ''),
+            'endDate' => $request->query->get('endDate', ''),
+            'budgetMonth' => $request->query->get('budgetMonth', ''),
+            'hasRecurringTransaction' => $request->query->get('hasRecurringTransaction', ''),
+        ];
+
+        $searchCriteria = array_filter($searchCriteria, static fn($value) => $value !== '');
+
+        // Use search or regular query
+        if (!empty($searchCriteria)) {
+            $query = $this->transactionService->searchUserTransactions($user, $searchCriteria);
+        } else {
+            $query = $this->transactionService->getUserTransactionsQuery($user);
+        }
+
         $transactions = $this->paginator->paginate(
             $query,
             $request->query->getInt('page', 1),
@@ -52,6 +78,7 @@ class TransactionController extends AbstractController
         return $this->render('transaction/index.html.twig', [
             'transactions' => $transactions,
             'stats' => $stats,
+            'recurringTransactions' => $recurringTransactions,
         ]);
     }
 
@@ -76,7 +103,7 @@ class TransactionController extends AbstractController
         ]);
     }
 
-    #[Route('/{id}', name: 'app_transaction_show', methods: ['GET'], requirements: ['id' => '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'])]
+    #[Route('/{id}', name: 'app_transaction_show', requirements: ['id' => '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'], methods: ['GET'])]
     public function show(Transaction $transaction): Response
     {
         $this->denyAccessUnlessGranted(TransactionVoter::VIEW, $transaction);
@@ -86,7 +113,7 @@ class TransactionController extends AbstractController
         ]);
     }
 
-    #[Route('/{id}/edit', name: 'app_transaction_edit', methods: ['GET', 'POST'], requirements: ['id' => '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'])]
+    #[Route('/{id}/edit', name: 'app_transaction_edit', requirements: ['id' => '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'], methods: ['GET', 'POST'])]
     public function edit(Request $request, Transaction $transaction): Response
     {
         $this->denyAccessUnlessGranted(TransactionVoter::EDIT, $transaction);
@@ -108,7 +135,7 @@ class TransactionController extends AbstractController
         ]);
     }
 
-    #[Route('/{id}', name: 'app_transaction_delete', methods: ['POST'], requirements: ['id' => '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'])]
+    #[Route('/{id}', name: 'app_transaction_delete', requirements: ['id' => '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'], methods: ['POST'])]
     public function delete(Request $request, Transaction $transaction): Response
     {
         $this->denyAccessUnlessGranted(TransactionVoter::DELETE, $transaction);
@@ -120,4 +147,84 @@ class TransactionController extends AbstractController
 
         return $this->redirectToRoute('app_transaction_index');
     }
+
+
+    #[Route('/assign-recurring', name: 'app_transaction_assign_recurring', methods: ['POST'])]
+    public function assignRecurring(Request $request): Response
+    {
+        // Vérifier le token CSRF
+        if (!$this->isCsrfTokenValid('assign_recurring', $request->request->get('_token'))) {
+            $this->addFlash('error', 'Token CSRF invalide.');
+            return $this->redirectToRoute('app_transaction_index');
+        }
+
+        $user = $this->getUser();
+        $transactionIds = $request->request->all('transaction_ids');
+        $recurringTransactionId = $request->request->get('recurring_transaction_id');
+        $newRecurringName = $request->request->get('new_recurring_name');
+
+        if (empty($transactionIds)) {
+            $this->addFlash('error', 'Aucune transaction sélectionnée.');
+            return $this->redirectToRoute('app_transaction_index');
+        }
+
+        try {
+
+            if ($recurringTransactionId && $recurringTransactionId !== 'new') {
+                // Valider l'UUID
+                if (!Uuid::isValid($recurringTransactionId)) {
+                    $this->addFlash('error', 'Identifiant de transaction récurrente invalide.');
+                    return $this->redirectToRoute('app_transaction_index');
+                }
+
+                $recurringTransaction = $this->recurringTransactionRepository->findByUserAndId($user, Uuid::fromString($recurringTransactionId));
+                if (!$recurringTransaction) {
+                    $this->addFlash('error', 'Transaction récurrente introuvable.');
+                    return $this->redirectToRoute('app_transaction_index');
+                }
+            } elseif ($newRecurringName) {
+                $recurringTransaction = new RecurringTransaction();
+                $recurringTransaction->setName($newRecurringName);
+                $this->recurringTransactionService->createRecurringTransaction($recurringTransaction, $user);
+            } else {
+                $this->addFlash('error', 'Veuillez sélectionner ou créer une transaction récurrente.');
+                return $this->redirectToRoute('app_transaction_index');
+            }
+
+            // Valider les UUIDs des transactions
+            foreach ($transactionIds as $transactionId) {
+                if (!Uuid::isValid($transactionId)) {
+                    $this->addFlash('error', 'Identifiant de transaction invalide.');
+                    return $this->redirectToRoute('app_transaction_index');
+                }
+            }
+
+            $updatedCount = $this->transactionService->assignTransactionsToRecurring($transactionIds, $recurringTransaction);
+
+            // Ajouter le flash message
+            $this->addFlash('success', sprintf(
+                '%d transaction(s) attribuée(s) à "%s" avec succès.',
+                $updatedCount,
+                $recurringTransaction->getName()
+            ));
+
+            // Rediriger vers la même recherche si des critères étaient présents
+            $searchParams = [];
+            foreach ($request->request->all() as $key => $value) {
+                if (!empty($value) && str_starts_with($key, 'search_')) {
+                    $searchParams[substr($key, 7)] = $value; // Remove 'search_' prefix
+                }
+            }
+
+            if (!empty($searchParams)) {
+                return $this->redirectToRoute('app_transaction_index', $searchParams);
+            }
+
+        } catch (Exception $e) {
+            $this->addFlash('error', 'Une erreur est survenue lors de l\'attribution : ' . $e->getMessage());
+        }
+
+        return $this->redirectToRoute('app_transaction_index');
+    }
+
 }

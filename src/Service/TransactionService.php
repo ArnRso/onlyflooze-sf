@@ -9,6 +9,7 @@ use App\Repository\TransactionRepository;
 use DateTimeImmutable;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\Query;
+use Ramsey\Uuid\Uuid;
 
 readonly class TransactionService
 {
@@ -205,4 +206,82 @@ readonly class TransactionService
         return $summary;
     }
 
+    public function searchUserTransactions(User $user, array $criteria = []): Query
+    {
+        $qb = $this->entityManager->createQueryBuilder()
+            ->select('t', 'tags', 'rt')
+            ->from(Transaction::class, 't')
+            ->leftJoin('t.tags', 'tags')
+            ->leftJoin('t.recurringTransaction', 'rt')
+            ->where('t.user = :user')
+            ->setParameter('user', $user);
+
+        if (!empty($criteria['label'])) {
+            $qb->andWhere('LOWER(t.label) LIKE LOWER(:label)')
+                ->setParameter('label', '%' . $criteria['label'] . '%');
+        }
+
+        if (!empty($criteria['minAmount'])) {
+            $qb->andWhere('t.amount >= :minAmount')
+                ->setParameter('minAmount', $criteria['minAmount']);
+        }
+
+        if (!empty($criteria['maxAmount'])) {
+            $qb->andWhere('t.amount <= :maxAmount')
+                ->setParameter('maxAmount', $criteria['maxAmount']);
+        }
+
+        if (!empty($criteria['startDate'])) {
+            $qb->andWhere('t.transactionDate >= :startDate')
+                ->setParameter('startDate', new DateTimeImmutable($criteria['startDate']));
+        }
+
+        if (!empty($criteria['endDate'])) {
+            $qb->andWhere('t.transactionDate <= :endDate')
+                ->setParameter('endDate', new DateTimeImmutable($criteria['endDate']));
+        }
+
+        if (!empty($criteria['budgetMonth'])) {
+            $qb->andWhere('t.budgetMonth = :budgetMonth')
+                ->setParameter('budgetMonth', $criteria['budgetMonth']);
+        }
+
+        if (isset($criteria['hasRecurringTransaction'])) {
+            if ($criteria['hasRecurringTransaction'] === 'yes') {
+                $qb->andWhere('t.recurringTransaction IS NOT NULL');
+            } elseif ($criteria['hasRecurringTransaction'] === 'no') {
+                $qb->andWhere('t.recurringTransaction IS NULL');
+            }
+        }
+
+        if (!empty($criteria['tagIds'])) {
+            $qb->andWhere('tags.id IN (:tagIds)')
+                ->setParameter('tagIds', $criteria['tagIds']);
+        }
+
+        $qb->orderBy('t.transactionDate', 'DESC')
+            ->addOrderBy('t.createdAt', 'DESC');
+
+        return $qb->getQuery();
+    }
+
+    public function assignTransactionsToRecurring(array $transactionIds, RecurringTransaction $recurringTransaction): int
+    {
+        // Convertir les strings en UUID
+        $uuidTransactionIds = array_map(static fn($id) => Uuid::fromString($id), $transactionIds);
+
+        $qb = $this->entityManager->createQueryBuilder()
+            ->update(Transaction::class, 't')
+            ->set('t.recurringTransaction', ':recurringTransaction')
+            ->where('t.id IN (:transactionIds)')
+            ->andWhere('t.user = :user')
+            ->setParameter('recurringTransaction', $recurringTransaction)
+            ->setParameter('transactionIds', $uuidTransactionIds)
+            ->setParameter('user', $recurringTransaction->getUser());
+
+        $updatedCount = $qb->getQuery()->execute();
+        $this->entityManager->flush();
+
+        return $updatedCount;
+    }
 }

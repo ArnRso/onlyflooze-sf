@@ -48,9 +48,22 @@ readonly class RecurringTransactionService
         return $this->recurringTransactionRepository->findByUser($user);
     }
 
+    /**
+     * @return RecurringTransaction[]
+     */
+    public function getUserRecurringTransactionsWithTransactions(User $user): array
+    {
+        return $this->recurringTransactionRepository->findByUserWithTransactions($user);
+    }
+
     public function getUserRecurringTransactionById(User $user, UuidInterface $id): ?RecurringTransaction
     {
         return $this->recurringTransactionRepository->findByUserAndId($user, $id);
+    }
+
+    public function getUserRecurringTransactionByIdWithTransactionsAndTags(User $user, UuidInterface $id): ?RecurringTransaction
+    {
+        return $this->recurringTransactionRepository->findByUserAndIdWithTransactionsAndTags($user, $id);
     }
 
     public function getUserRecurringTransactionCount(User $user): int

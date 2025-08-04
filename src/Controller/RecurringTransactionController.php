@@ -26,7 +26,7 @@ class RecurringTransactionController extends AbstractController
     public function index(): Response
     {
         $user = $this->getUser();
-        $recurringTransactions = $this->recurringTransactionService->getUserRecurringTransactions($user);
+        $recurringTransactions = $this->recurringTransactionService->getUserRecurringTransactionsWithTransactions($user);
 
         return $this->render('recurring_transaction/index.html.twig', [
             'recurring_transactions' => $recurringTransactions,
@@ -54,20 +54,30 @@ class RecurringTransactionController extends AbstractController
         ]);
     }
 
-    #[Route('/{id}', name: 'app_recurring_transaction_show', methods: ['GET'], requirements: ['id' => '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'])]
+    #[Route('/{id}', name: 'app_recurring_transaction_show', requirements: ['id' => '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'], methods: ['GET'])]
     public function show(RecurringTransaction $recurringTransaction): Response
     {
         $this->denyAccessUnlessGranted(RecurringTransactionVoter::VIEW, $recurringTransaction);
 
-        $stats = $this->recurringTransactionService->getRecurringTransactionStats($recurringTransaction);
+        // Recharger avec les transactions et tags pour éviter les requêtes N+1
+        $recurringTransactionWithData = $this->recurringTransactionService->getUserRecurringTransactionByIdWithTransactionsAndTags(
+            $this->getUser(),
+            $recurringTransaction->getId()
+        );
+
+        if (!$recurringTransactionWithData) {
+            throw $this->createNotFoundException('Transaction récurrente introuvable.');
+        }
+
+        $stats = $this->recurringTransactionService->getRecurringTransactionStats($recurringTransactionWithData);
 
         return $this->render('recurring_transaction/show.html.twig', [
-            'recurring_transaction' => $recurringTransaction,
+            'recurring_transaction' => $recurringTransactionWithData,
             'stats' => $stats,
         ]);
     }
 
-    #[Route('/{id}/edit', name: 'app_recurring_transaction_edit', methods: ['GET', 'POST'], requirements: ['id' => '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'])]
+    #[Route('/{id}/edit', name: 'app_recurring_transaction_edit', requirements: ['id' => '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'], methods: ['GET', 'POST'])]
     public function edit(Request $request, RecurringTransaction $recurringTransaction): Response
     {
         $this->denyAccessUnlessGranted(RecurringTransactionVoter::EDIT, $recurringTransaction);
@@ -89,7 +99,7 @@ class RecurringTransactionController extends AbstractController
         ]);
     }
 
-    #[Route('/{id}', name: 'app_recurring_transaction_delete', methods: ['POST'], requirements: ['id' => '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'])]
+    #[Route('/{id}', name: 'app_recurring_transaction_delete', requirements: ['id' => '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'], methods: ['POST'])]
     public function delete(Request $request, RecurringTransaction $recurringTransaction): Response
     {
         $this->denyAccessUnlessGranted(RecurringTransactionVoter::DELETE, $recurringTransaction);
