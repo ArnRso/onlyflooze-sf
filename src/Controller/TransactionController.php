@@ -3,11 +3,14 @@
 namespace App\Controller;
 
 use App\Entity\RecurringTransaction;
+use App\Entity\Tag;
 use App\Entity\Transaction;
 use App\Form\TransactionType;
 use App\Repository\RecurringTransactionRepository;
+use App\Repository\TagRepository;
 use App\Security\Voter\TransactionVoter;
 use App\Service\RecurringTransactionService;
+use App\Service\TagService;
 use App\Service\TransactionService;
 use Exception;
 use Knp\Component\Pager\PaginatorInterface;
@@ -26,7 +29,9 @@ class TransactionController extends AbstractController
         private readonly TransactionService             $transactionService,
         private readonly RecurringTransactionService    $recurringTransactionService,
         private readonly PaginatorInterface             $paginator,
-        private readonly RecurringTransactionRepository $recurringTransactionRepository
+        private readonly RecurringTransactionRepository $recurringTransactionRepository,
+        private readonly TagRepository                  $tagRepository,
+        private readonly TagService                     $tagService
     )
     {
     }
@@ -35,11 +40,12 @@ class TransactionController extends AbstractController
     public function index(Request $request): Response
     {
         $user = $this->getUser();
-        $recurringTransactions = $this->recurringTransactionRepository->findByUser($user);
+        $recurringTransactions = $this->recurringTransactionService->getUserRecurringTransactionsWithCount($user);
+        $tags = $this->tagRepository->findByUserWithTransactionCount($user);
 
-        // Get limit from query parameter (default: 20, allowed: 10, 20, 50, 100)
+        // Get limit from query parameter (default: 20, allowed: 10, 20, 50, 100, 250, 500)
         $limit = $request->query->getInt('limit', 20);
-        $allowedLimits = [10, 20, 50, 100];
+        $allowedLimits = [10, 20, 50, 100, 250, 500];
         if (!in_array($limit, $allowedLimits)) {
             $limit = 20;
         }
@@ -79,6 +85,7 @@ class TransactionController extends AbstractController
             'transactions' => $transactions,
             'stats' => $stats,
             'recurringTransactions' => $recurringTransactions,
+            'tags' => $tags,
         ]);
     }
 
@@ -222,6 +229,93 @@ class TransactionController extends AbstractController
 
         } catch (Exception $e) {
             $this->addFlash('error', 'Une erreur est survenue lors de l\'attribution : ' . $e->getMessage());
+        }
+
+        return $this->redirectToRoute('app_transaction_index');
+    }
+
+    #[Route('/assign-tags', name: 'app_transaction_assign_tags', methods: ['POST'])]
+    public function assignTags(Request $request): Response
+    {
+        // Vérifier le token CSRF
+        if (!$this->isCsrfTokenValid('assign_tags', $request->request->get('_token'))) {
+            $this->addFlash('error', 'Token CSRF invalide.');
+            return $this->redirectToRoute('app_transaction_index');
+        }
+
+        $user = $this->getUser();
+        $transactionIds = $request->request->all('transaction_ids');
+        $existingTagIds = $request->request->all('existing_tags') ?? [];
+        $newTags = $request->request->all('new_tags') ?? [];
+
+        if (empty($transactionIds)) {
+            $this->addFlash('error', 'Aucune transaction sélectionnée.');
+            return $this->redirectToRoute('app_transaction_index');
+        }
+
+        if (empty($existingTagIds) && empty(array_filter($newTags, static fn($tag) => !empty($tag['name'])))) {
+            $this->addFlash('error', 'Aucun tag sélectionné ou créé.');
+            return $this->redirectToRoute('app_transaction_index');
+        }
+
+        try {
+            // Valider les UUIDs des transactions
+            foreach ($transactionIds as $transactionId) {
+                if (!Uuid::isValid($transactionId)) {
+                    $this->addFlash('error', 'Identifiant de transaction invalide.');
+                    return $this->redirectToRoute('app_transaction_index');
+                }
+            }
+
+            $tags = [];
+
+            // Récupérer les tags existants
+            foreach ($existingTagIds as $tagId) {
+                if (!Uuid::isValid($tagId)) {
+                    $this->addFlash('error', 'Identifiant de tag invalide.');
+                    return $this->redirectToRoute('app_transaction_index');
+                }
+
+                $tag = $this->tagRepository->findOneBy(['id' => Uuid::fromString($tagId), 'user' => $user]);
+                if ($tag) {
+                    $tags[] = $tag;
+                }
+            }
+
+            // Créer les nouveaux tags
+            foreach ($newTags as $newTagData) {
+                if (!empty($newTagData['name'])) {
+                    $tag = new Tag();
+                    $tag->setName(trim($newTagData['name']));
+                    $this->tagService->createTag($tag, $user);
+                    $tags[] = $tag;
+                }
+            }
+
+            $updatedCount = $this->transactionService->assignTagsToTransactions($transactionIds, $tags);
+
+            // Ajouter le flash message
+            $tagNames = array_map(static fn($tag) => $tag->getName(), $tags);
+            $this->addFlash('success', sprintf(
+                '%d transaction(s) mise(s) à jour avec les tags : %s',
+                $updatedCount,
+                implode(', ', $tagNames)
+            ));
+
+            // Rediriger vers la même recherche si des critères étaient présents
+            $searchParams = [];
+            foreach ($request->request->all() as $key => $value) {
+                if (!empty($value) && str_starts_with($key, 'search_')) {
+                    $searchParams[substr($key, 7)] = $value; // Remove 'search_' prefix
+                }
+            }
+
+            if (!empty($searchParams)) {
+                return $this->redirectToRoute('app_transaction_index', $searchParams);
+            }
+
+        } catch (Exception $e) {
+            $this->addFlash('error', 'Une erreur est survenue lors de l\'attribution des tags : ' . $e->getMessage());
         }
 
         return $this->redirectToRoute('app_transaction_index');

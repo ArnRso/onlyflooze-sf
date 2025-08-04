@@ -3,6 +3,7 @@
 namespace App\Service;
 
 use App\Entity\RecurringTransaction;
+use App\Entity\Tag;
 use App\Entity\Transaction;
 use App\Entity\User;
 use App\Repository\TransactionRepository;
@@ -283,5 +284,39 @@ readonly class TransactionService
         $this->entityManager->flush();
 
         return $updatedCount;
+    }
+
+    /**
+     * @param string[] $transactionIds
+     * @param Tag[] $tags
+     */
+    public function assignTagsToTransactions(array $transactionIds, array $tags): int
+    {
+        $updatedCount = 0;
+
+        // Convertir les strings en UUID
+        $uuidTransactionIds = array_map(static fn($id) => Uuid::fromString($id), $transactionIds);
+
+        // Récupérer les transactions
+        $transactions = $this->entityManager->createQueryBuilder()
+            ->select('t')
+            ->from(Transaction::class, 't')
+            ->where('t.id IN (:transactionIds)')
+            ->setParameter('transactionIds', $uuidTransactionIds)
+            ->getQuery()
+            ->getResult();
+
+        foreach ($transactions as $transaction) {
+            foreach ($tags as $tag) {
+                if (!$transaction->getTags()->contains($tag)) {
+                    $transaction->addTag($tag);
+                    $updatedCount++;
+                }
+            }
+        }
+
+        $this->entityManager->flush();
+
+        return count($transactions);
     }
 }

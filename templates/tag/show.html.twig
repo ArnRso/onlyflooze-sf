@@ -4,118 +4,182 @@
 
 {% block body %}
     <div class="container py-4">
-        <div class="row justify-content-center">
-            <div class="col-md-8 col-lg-6">
-                <div class="card shadow">
-                    <div class="card-header bg-info text-white">
-                        <h4 class="mb-0">👁️ Détails du Tag</h4>
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h1 class="h3 text-primary">
+                🏷️ {% include 'components/tag.html.twig' with {'tag': tag} %}
+            </h1>
+            <div>
+                <a href="{{ path('app_tag_edit', {'id': tag.id}) }}"
+                   class="btn btn-warning me-2">
+                    <i class="fas fa-edit"></i> Modifier
+                </a>
+                <a href="{{ path('app_tag_index') }}" class="btn btn-secondary">
+                    <i class="fas fa-arrow-left"></i> Retour
+                </a>
+            </div>
+        </div>
+
+        <div class="row">
+            <!-- Informations générales -->
+            <div class="col-md-6 mb-4">
+                <div class="card h-100">
+                    <div class="card-header">
+                        <h5 class="mb-0">Informations générales</h5>
                     </div>
                     <div class="card-body">
-                        <div class="row mb-3">
-                            <div class="col-sm-4">
-                                <strong>Nom :</strong>
-                            </div>
-                            <div class="col-sm-8">
-                                {% include 'components/tag.html.twig' with {
-                                    'tag': tag,
-                                    'size': 'lg'
-                                } %}
-                            </div>
-                        </div>
+                        <dl class="row">
+                            <dt class="col-sm-4">Nom :</dt>
+                            <dd class="col-sm-8">{{ tag.name }}</dd>
 
-                        <div class="row mb-3">
-                            <div class="col-sm-4">
-                                <strong>Couleur :</strong>
-                            </div>
-                            <div class="col-sm-8">
+                            <dt class="col-sm-4">Couleur :</dt>
+                            <dd class="col-sm-8">
                                 <div class="d-flex align-items-center">
                                     <div class="rounded me-2"
-                                         style="width: 30px; height: 30px; background-color: {{ tag.color }};"></div>
+                                         style="width: 20px; height: 20px; background-color: {{ tag.color }};"></div>
                                     <code>{{ tag.color }}</code>
                                 </div>
-                            </div>
-                        </div>
+                            </dd>
 
-                        <div class="row mb-3">
-                            <div class="col-sm-4">
-                                <strong>Transactions :</strong>
-                            </div>
-                            <div class="col-sm-8">
-                                <span
-                                    class="badge bg-secondary fs-6">{{ tag.transactions|length }} transaction(s)</span>
-                            </div>
-                        </div>
+                            <dt class="col-sm-4">Créé le :</dt>
+                            <dd class="col-sm-8">{{ tag.createdAt|date('d/m/Y à H:i') }}</dd>
 
-                        <div class="row mb-3">
-                            <div class="col-sm-4">
-                                <strong>Créé le :</strong>
-                            </div>
-                            <div class="col-sm-8">
-                                <small class="text-muted">
-                                    {{ tag.createdAt|date('d/m/Y à H:i') }}
-                                </small>
-                            </div>
-                        </div>
+                            <dt class="col-sm-4">Modifié le :</dt>
+                            <dd class="col-sm-8">{{ tag.updatedAt|date('d/m/Y à H:i') }}</dd>
+                        </dl>
+                    </div>
+                </div>
+            </div>
 
-                        {% if tag.updatedAt != tag.createdAt %}
-                            <div class="row mb-3">
-                                <div class="col-sm-4">
-                                    <strong>Modifié le :</strong>
-                                </div>
-                                <div class="col-sm-8">
-                                    <small class="text-muted">
-                                        {{ tag.updatedAt|date('d/m/Y à H:i') }}
-                                    </small>
-                                </div>
+            <!-- Statistiques -->
+            <div class="col-md-6 mb-4">
+                <div class="card h-100">
+                    <div class="card-header">
+                        <h5 class="mb-0">Statistiques</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row text-center">
+                            <div class="col-3">
+                                <h4 class="text-info">{{ stats.total_transactions }}</h4>
+                                <small class="text-muted">Transactions</small>
                             </div>
-                        {% endif %}
-
-                        {% if tag.transactions|length > 0 %}
-                            <hr>
-                            <h6>Transactions associées :</h6>
-                            <div class="list-group list-group-flush">
-                                {% for transaction in tag.transactions|slice(0, 5) %}
-                                    <div class="list-group-item d-flex justify-content-between align-items-center">
-                                        <div>
-                                            <strong>{{ transaction.label }}</strong><br>
-                                            <small
-                                                class="text-muted">{{ transaction.transactionDate|date('d/m/Y') }}</small>
-                                        </div>
-                                        <span
-                                            class="{% if transaction.amountAsFloat >= 0 %}text-success{% else %}text-danger{% endif %} fw-bold">
-                                        {{ transaction.amount|number_format(2, ',', ' ') }}&nbsp;€
-                                    </span>
-                                    </div>
-                                {% endfor %}
-                                {% if tag.transactions|length > 5 %}
-                                    <div class="list-group-item text-center">
-                                        <small class="text-muted">... et {{ tag.transactions|length - 5 }} autre(s)
-                                            transaction(s)</small>
-                                    </div>
-                                {% endif %}
+                            <div class="col-3">
+                                <h4 class="{% if stats.total_amount >= 0 %}text-success{% else %}text-danger{% endif %}">
+                                    {{ stats.total_amount|number_format(2, ',', ' ') }}&nbsp;€
+                                </h4>
+                                <small class="text-muted">Total</small>
                             </div>
-                        {% endif %}
-
-                        <hr>
-
-                        <div class="d-grid gap-2 d-md-flex justify-content-md-between">
-                            <a href="{{ path('app_tag_index') }}" class="btn btn-secondary">
-                                <i class="fas fa-arrow-left"></i> Retour à la liste
-                            </a>
-                            <div>
-                                <a href="{{ path('app_tag_edit', {'id': tag.id}) }}" class="btn btn-warning me-2">
-                                    <i class="fas fa-edit"></i> Modifier
-                                </a>
-                                <button type="button" class="btn btn-danger" data-bs-toggle="modal"
-                                        data-bs-target="#deleteModal">
-                                    <i class="fas fa-trash"></i> Supprimer
-                                </button>
+                            <div class="col-3">
+                                <h4 class="text-secondary">{{ stats.average_amount|number_format(2, ',', ' ') }}
+                                    &nbsp;€</h4>
+                                <small class="text-muted">Moyenne</small>
+                            </div>
+                            <div class="col-3">
+                                <h4 class="text-warning">{{ stats.average_per_month|number_format(2, ',', ' ') }}
+                                    &nbsp;€</h4>
+                                <small class="text-muted">Moy./mois</small>
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
+
+        <!-- Graphique des totaux mensuels -->
+        {% if monthly_totals|length > 0 %}
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">📊 Évolution des totaux par mois budgétaire</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="monthlyTotalsChart" height="150"></canvas>
+                </div>
+            </div>
+        {% endif %}
+
+        <!-- Transactions liées -->
+        {% if tag.transactions|length > 0 %}
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Transactions liées ({{ tag.transactions|length }})</h5>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead class="table-light">
+                            <tr>
+                                <th>Date</th>
+                                <th>Libellé</th>
+                                <th>Mois budgétaire</th>
+                                <th class="text-end">Montant</th>
+                                <th>Transaction récurrente</th>
+                                <th class="text-center">Actions</th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                            {% for transaction in tag.transactions %}
+                                <tr>
+                                    <td>
+                                        <small
+                                            class="text-muted">{{ transaction.transactionDate|date('d/m/Y') }}</small>
+                                    </td>
+                                    <td>
+                                        <strong>{{ transaction.label }}</strong>
+                                    </td>
+                                    <td>
+                                        {% if transaction.budgetMonth %}
+                                            <span class="badge bg-secondary">{{ transaction.budgetMonth }}</span>
+                                        {% else %}
+                                            <small class="text-muted">-</small>
+                                        {% endif %}
+                                    </td>
+                                    <td class="text-end">
+                                        <span
+                                            class="{% if transaction.amountAsFloat >= 0 %}text-success{% else %}text-danger{% endif %} fw-bold">
+                                            {{ transaction.amount|number_format(2, ',', ' ') }}&nbsp;€
+                                        </span>
+                                    </td>
+                                    <td>
+                                        {% if transaction.recurringTransaction %}
+                                            <span class="badge bg-primary text-white">
+                                                🔄 {{ transaction.recurringTransaction.name }}
+                                            </span>
+                                        {% else %}
+                                            <small class="text-muted">-</small>
+                                        {% endif %}
+                                    </td>
+                                    <td class="text-center">
+                                        <div class="btn-group btn-group-sm">
+                                            <a href="{{ path('app_transaction_show', {'id': transaction.id}) }}"
+                                               class="btn btn-outline-info">
+                                                <i class="fas fa-eye"></i>
+                                            </a>
+                                            <a href="{{ path('app_transaction_edit', {'id': transaction.id}) }}"
+                                               class="btn btn-outline-warning">
+                                                <i class="fas fa-edit"></i>
+                                            </a>
+                                        </div>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        {% else %}
+            <div class="card">
+                <div class="card-body text-center py-5">
+                    <div class="mb-4">
+                        <i class="fas fa-receipt fs-1 text-muted"></i>
+                    </div>
+                    <h4 class="text-muted">Aucune transaction liée</h4>
+                    <p class="text-muted">Ce tag n'a pas encore de transactions associées.</p>
+                    <a href="{{ path('app_transaction_new') }}" class="btn btn-primary">
+                        <i class="fas fa-plus"></i> Créer une transaction
+                    </a>
+                </div>
+            </div>
+        {% endif %}
     </div>
 
     <!-- Modal de suppression -->
@@ -150,4 +214,14 @@
             </div>
         </div>
     </div>
+{% endblock %}
+
+{% block javascripts %}
+    {{ parent() }}
+    {% if monthly_totals|length > 0 %}
+        <script>
+            window.monthlyTotalsData = {{ monthly_totals|json_encode|raw }};
+        </script>
+        {{ importmap('js/recurring-transactions-chart.js') }}
+    {% endif %}
 {% endblock %}

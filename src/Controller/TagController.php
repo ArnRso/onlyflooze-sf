@@ -27,7 +27,7 @@ class TagController extends AbstractController
     {
         $user = $this->getUser();
         $tags = $this->tagService->getUserTagsWithTransactionCount($user);
-        $stats = $this->tagService->getTagStats($user);
+        $stats = $this->tagService->getUserTagStats($user);
 
         return $this->render('tag/index.html.twig', [
             'tags' => $tags,
@@ -56,17 +56,22 @@ class TagController extends AbstractController
         ]);
     }
 
-    #[Route('/{id}', name: 'app_tag_show', methods: ['GET'], requirements: ['id' => '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'])]
+    #[Route('/{id}', name: 'app_tag_show', requirements: ['id' => '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'], methods: ['GET'])]
     public function show(Tag $tag): Response
     {
         $this->denyAccessUnlessGranted(TagVoter::VIEW, $tag);
 
+        $stats = $this->tagService->getTagStats($tag);
+        $monthlyTotals = $this->tagService->getMonthlyTotalsForTag($tag);
+
         return $this->render('tag/show.html.twig', [
             'tag' => $tag,
+            'stats' => $stats,
+            'monthly_totals' => $monthlyTotals,
         ]);
     }
 
-    #[Route('/{id}/edit', name: 'app_tag_edit', methods: ['GET', 'POST'], requirements: ['id' => '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'])]
+    #[Route('/{id}/edit', name: 'app_tag_edit', requirements: ['id' => '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'], methods: ['GET', 'POST'])]
     public function edit(Request $request, Tag $tag): Response
     {
         $this->denyAccessUnlessGranted(TagVoter::EDIT, $tag);
@@ -88,7 +93,7 @@ class TagController extends AbstractController
         ]);
     }
 
-    #[Route('/{id}', name: 'app_tag_delete', methods: ['POST'], requirements: ['id' => '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'])]
+    #[Route('/{id}', name: 'app_tag_delete', requirements: ['id' => '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'], methods: ['POST'])]
     public function delete(Request $request, Tag $tag): Response
     {
         $this->denyAccessUnlessGranted(TagVoter::DELETE, $tag);
