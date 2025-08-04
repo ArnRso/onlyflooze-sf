@@ -27,9 +27,11 @@ class RecurringTransactionController extends AbstractController
     {
         $user = $this->getUser();
         $recurringTransactions = $this->recurringTransactionService->getUserRecurringTransactionsWithTransactions($user);
+        $monthlyTotals = $this->recurringTransactionService->getMonthlyTotalsForUser($user);
 
         return $this->render('recurring_transaction/index.html.twig', [
             'recurring_transactions' => $recurringTransactions,
+            'monthly_totals' => $monthlyTotals,
         ]);
     }
 
@@ -70,10 +72,12 @@ class RecurringTransactionController extends AbstractController
         }
 
         $stats = $this->recurringTransactionService->getRecurringTransactionStats($recurringTransactionWithData);
+        $monthlyTotals = $this->recurringTransactionService->getMonthlyTotalsForRecurringTransaction($recurringTransactionWithData);
 
         return $this->render('recurring_transaction/show.html.twig', [
             'recurring_transaction' => $recurringTransactionWithData,
             'stats' => $stats,
+            'monthly_totals' => $monthlyTotals,
         ]);
     }
 

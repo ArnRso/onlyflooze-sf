@@ -57,4 +57,14 @@ return [
         'version' => '7.0.0',
         'type' => 'css',
     ],
+    'chart.js' => [
+        'version' => '4.5.0',
+    ],
+    '@kurkle/color' => [
+        'version' => '0.3.4',
+    ],
+    'js/recurring-transactions-chart.js' => [
+        'path' => './assets/js/recurring-transactions-chart.js',
+        'entrypoint' => true,
+    ],
 ];
