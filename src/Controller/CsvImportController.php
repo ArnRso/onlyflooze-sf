@@ -67,7 +67,13 @@ class CsvImportController extends AbstractController
                 throw new RuntimeException('Unable to create upload directory');
             }
 
-            $filename = uniqid('', true) . '.' . $file->guessExtension();
+            // Preserve original extension or use csv as fallback
+            $originalExtension = pathinfo($file->getClientOriginalName(), PATHINFO_EXTENSION);
+            if (empty($originalExtension)) {
+                $originalExtension = $file->guessExtension() ?: 'csv';
+            }
+
+            $filename = uniqid('', true) . '.' . $originalExtension;
             $file->move($uploadsDirectory, $filename);
             $filePath = $uploadsDirectory . '/' . $filename;
 
@@ -375,7 +381,13 @@ class CsvImportController extends AbstractController
             return $this->redirectToRoute('app_csv_import_profile_new');
         }
 
-        $form = $this->createForm(CsvUploadType::class, null, [
+        // Pre-select the profile if there's only one
+        $defaultData = null;
+        if (count($profiles) === 1) {
+            $defaultData = ['profile' => $profiles[0]];
+        }
+
+        $form = $this->createForm(CsvUploadType::class, $defaultData, [
             'profiles' => $profiles
         ]);
         $form->handleRequest($request);
@@ -393,7 +405,13 @@ class CsvImportController extends AbstractController
                 throw new RuntimeException('Unable to create upload directory');
             }
 
-            $filename = uniqid('', true) . '.' . $file->guessExtension();
+            // Preserve original extension or use csv as fallback
+            $originalExtension = pathinfo($file->getClientOriginalName(), PATHINFO_EXTENSION);
+            if (empty($originalExtension)) {
+                $originalExtension = $file->guessExtension() ?: 'csv';
+            }
+
+            $filename = uniqid('', true) . '.' . $originalExtension;
             $file->move($uploadsDirectory, $filename);
             $filePath = $uploadsDirectory . '/' . $filename;
 

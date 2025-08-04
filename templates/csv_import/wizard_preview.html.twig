@@ -44,7 +44,8 @@
                                 <p class="card-text">
                                     <strong>Nom :</strong> {{ filename }}<br>
                                     <strong>Lignes trouvées :</strong> {{ preview.total_rows }}<br>
-                                    <strong>Lignes valides :</strong> {{ preview.valid_rows }}<br>
+                                    <strong>Transactions à importer :</strong> <span
+                                        class="text-success fw-bold">{{ preview.valid_rows }}</span><br>
                                     {% if preview.errors is not empty %}
                                         <strong class="text-warning">Erreurs :</strong> {{ preview.errors|length }}
                                     {% endif %}
@@ -85,7 +86,8 @@
                     <div class="card-header">
                         <h5 class="mb-0">
                             <i class="fas fa-eye"></i>
-                            Aperçu des données ({{ preview.sample_data|length }} premières lignes)
+                            Aperçu des données ({{ preview.sample_data|length }} premières lignes
+                            sur {{ preview.total_rows }} total)
                         </h5>
                     </div>
                     <div class="card-body">

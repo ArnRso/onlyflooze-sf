@@ -193,11 +193,11 @@
                                                             {% set headers = headers|merge(['Date']) %}
                                                         {% elseif mapping.label == i %}
                                                             {% set headers = headers|merge(['Libellé']) %}
-                                                        {% elseif mapping.amount == i and profile.amountType == 'single' %}
+                                                        {% elseif mapping.amount is defined and mapping.amount == i and profile.amountType == 'single' %}
                                                             {% set headers = headers|merge(['Montant']) %}
-                                                        {% elseif mapping.credit == i and profile.amountType == 'split' %}
+                                                        {% elseif mapping.credit is defined and mapping.credit == i and profile.amountType == 'split' %}
                                                             {% set headers = headers|merge(['Crédit']) %}
-                                                        {% elseif mapping.debit == i and profile.amountType == 'split' %}
+                                                        {% elseif mapping.debit is defined and mapping.debit == i and profile.amountType == 'split' %}
                                                             {% set headers = headers|merge(['Débit']) %}
                                                         {% else %}
                                                             {% set headers = headers|merge(['Colonne' ~ i]) %}

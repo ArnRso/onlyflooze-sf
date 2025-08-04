@@ -148,10 +148,21 @@ readonly class TransactionImportService
             // Parse raw CSV with sample data and parsed data
             $csvData = $this->csvParserService->parseCsvFile($filePath, $profile);
 
-            $validRows = 0;
-            $sampleData = [];
-            $errors = [];
+            // Count total valid rows in the entire file
+            $totalValidRows = 0;
+            $totalErrors = [];
 
+            // First pass: count all valid rows and collect all errors
+            foreach ($csvData as $index => $rowData) {
+                if (isset($rowData['error']) && $rowData['error']) {
+                    $totalErrors[] = "Ligne " . ($index + 1) . ": " . ($rowData['message'] ?? 'Erreur de parsing');
+                } else {
+                    $totalValidRows++;
+                }
+            }
+
+            // Second pass: create sample data for preview (limited)
+            $sampleData = [];
             foreach (array_slice($csvData, 0, $limit) as $index => $rowData) {
                 $rowResult = [
                     'raw_data' => $rowData['raw_data'] ?? [],
@@ -163,14 +174,12 @@ readonly class TransactionImportService
                 if (isset($rowData['error']) && $rowData['error']) {
                     $rowResult['status'] = 'error';
                     $rowResult['message'] = $rowData['message'] ?? 'Erreur de parsing';
-                    $errors[] = "Ligne " . ($index + 1) . ": " . $rowResult['message'];
                 } else {
                     $rowResult['parsed_data'] = [
                         'date' => $rowData['date']->format('Y-m-d'),
                         'label' => $rowData['label'],
                         'amount' => $rowData['amount']
                     ];
-                    $validRows++;
                 }
 
                 $sampleData[] = $rowResult;
@@ -178,9 +187,9 @@ readonly class TransactionImportService
 
             return [
                 'total_rows' => count($csvData),
-                'valid_rows' => $validRows,
-                'sample_data' => $sampleData,
-                'errors' => $errors,
+                'valid_rows' => $totalValidRows, // Total valid rows in entire file
+                'sample_data' => $sampleData,   // Limited sample for preview
+                'errors' => array_slice($totalErrors, 0, 10), // Show max 10 errors in preview
                 'success' => true
             ];
 
@@ -216,12 +225,7 @@ readonly class TransactionImportService
             $errors[] = "Le fichier est trop volumineux (max 10MB)";
         }
 
-        $fileInfo = pathinfo($filePath);
-        if (!isset($fileInfo['extension']) || strtolower($fileInfo['extension']) !== 'csv') {
-            $errors[] = "Le fichier doit être au format CSV";
-        }
-
-        // Test opening the file
+        // Test opening the file and validate format
         $handle = fopen($filePath, 'r');
         if ($handle === false) {
             $errors[] = "Impossible d'ouvrir le fichier CSV";
@@ -230,6 +234,18 @@ readonly class TransactionImportService
             $firstLine = fgets($handle);
             if ($firstLine === false) {
                 $errors[] = "Le fichier CSV semble vide";
+            } else {
+                // Check file extension - allow csv and txt files, or validate content
+                $fileInfo = pathinfo($filePath);
+                $allowedExtensions = ['csv', 'txt'];
+                $hasValidExtension = isset($fileInfo['extension']) && in_array(strtolower($fileInfo['extension']), $allowedExtensions);
+
+                if (!$hasValidExtension) {
+                    // Check if file content looks like CSV (contains common separators)
+                    if (!(strpos($firstLine, ',') !== false || strpos($firstLine, ';') !== false || strpos($firstLine, "\t") !== false)) {
+                        $errors[] = "Le fichier doit être au format CSV ou TXT (aucun séparateur détecté)";
+                    }
+                }
             }
             fclose($handle);
         }
