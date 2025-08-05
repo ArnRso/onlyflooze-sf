@@ -43,6 +43,11 @@ jobs:
       - name: Install Composer dependencies
         run: composer install --prefer-dist --no-progress --no-scripts
 
+      - name: Setup Symfony environment and warm cache
+        run: |
+          cp .env .env.local
+          php bin/console cache:warmup --env=dev
+
       - name: Run PHPStan
         run: make phpstan
 
