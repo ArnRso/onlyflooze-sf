@@ -72,6 +72,8 @@ FROM dunglas/frankenphp:1-php8.3-alpine AS runtime
 RUN apk add --no-cache \
     postgresql-client \
     icu-libs \
+    netcat-openbsd \
+    bind-tools \
     && rm -rf /var/cache/apk/*
 
 # Installe les extensions PHP nécessaires (même liste que builder)
