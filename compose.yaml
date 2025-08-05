@@ -1,5 +1,32 @@
 
 services:
+  # Service principal avec FrankenPHP
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      - APP_ENV=prod
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-app}:${POSTGRES_PASSWORD:-!ChangeMe!}@database:5432/${POSTGRES_DB:-app}?serverVersion=16&charset=utf8
+    volumes:
+      # Volume pour les logs
+      - app_logs:/app/var/log
+      # Volume pour les uploads (si nécessaire)
+      - app_uploads:/app/var/uploads
+    depends_on:
+      database:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
 ###> doctrine/doctrine-bundle ###
   database:
     image: postgres:${POSTGRES_VERSION:-16}-alpine
@@ -17,9 +44,14 @@ services:
       - database_data:/var/lib/postgresql/data:rw
       # You may use a bind-mounted host directory instead, so that it is harder to accidentally remove the volume and lose all your data!
       # - ./docker/db/data:/var/lib/postgresql/data:rw
+    restart: unless-stopped
 ###< doctrine/doctrine-bundle ###
 
 volumes:
+  # Volume pour les logs de l'application
+  app_logs:
+  # Volume pour les uploads
+  app_uploads:
 ###> doctrine/doctrine-bundle ###
   database_data:
 ###< doctrine/doctrine-bundle ###
