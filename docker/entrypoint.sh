@@ -6,11 +6,49 @@ echo "🚀 Démarrage de l'application Symfony avec FrankenPHP..."
 # Fonction pour attendre que la base de données soit prête
 wait_for_db() {
     echo "⏳ Attente de la disponibilité de la base de données..."
+    echo "🔍 Debug: Variables d'environnement DB:"
+    echo "   - DATABASE_URL: ${DATABASE_URL-non définie}"
+    echo "   - APP_ENV: ${APP_ENV-non définie}"
+    
+    local attempt=1
+    local max_attempts=30
+    
     until php bin/console doctrine:query:sql "SELECT 1" > /dev/null 2>&1; do
-        echo "⏳ Base de données non disponible, nouvelle tentative dans 2 secondes..."
+        echo "⏳ Tentative $attempt/$max_attempts - Base de données non disponible..."
+        
+        # Debug détaillé toutes les 5 tentatives
+        if [ $((attempt % 5)) -eq 0 ]; then
+            echo "🔍 Debug détaillé (tentative $attempt):"
+            echo "   - Test de résolution DNS:"
+            nslookup database 2>/dev/null || echo "     DNS: échec"
+            
+            echo "   - Test de connexion réseau:"
+            nc -z database 5432 2>/dev/null && echo "     Port 5432: ouvert" || echo "     Port 5432: fermé"
+            
+            echo "   - Test pg_isready:"
+            pg_isready -h database -p 5432 -U ${POSTGRES_USER-app} 2>/dev/null && echo "     PostgreSQL: prêt" || echo "     PostgreSQL: pas prêt"
+            
+            echo "   - Test Doctrine (avec erreurs):"
+            php bin/console doctrine:query:sql "SELECT 1" 2>&1 | head -3
+            
+            echo "   - Cache Symfony:"
+            ls -la var/cache/ 2>/dev/null | head -3 || echo "     Cache: non accessible"
+        fi
+        
         sleep 2
+        attempt=$((attempt + 1))
+        
+        if [ $attempt -gt $max_attempts ]; then
+            echo "❌ Échec: Impossible de se connecter à la base de données après $max_attempts tentatives"
+            echo "🔍 Diagnostic final:"
+            echo "   - Variables d'environnement:"
+            env | grep -E "(DATABASE_URL|POSTGRES_|APP_)" || echo "     Aucune variable DB trouvée"
+            echo "   - Dernière erreur Doctrine:"
+            php bin/console doctrine:query:sql "SELECT 1" 2>&1 || true
+            exit 1
+        fi
     done
-    echo "✅ Base de données disponible !"
+    echo "✅ Base de données disponible après $attempt tentatives !"
 }
 
 # Fonction pour exécuter les migrations
