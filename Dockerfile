@@ -135,9 +135,11 @@ COPY --from=builder --chown=symfony:symfony /app/translations ./translations
 COPY --from=builder --chown=symfony:symfony /app/migrations ./migrations
 COPY --from=builder --chown=symfony:symfony /app/bin ./bin
 COPY --from=builder --chown=symfony:symfony /app/var/cache ./var/cache
+COPY --from=builder --chown=symfony:symfony /app/assets ./assets
 
 # Copie les fichiers de configuration essentiels
 COPY --chown=symfony:symfony composer.json composer.lock symfony.lock ./
+COPY --chown=symfony:symfony importmap.php ./
 COPY --chown=symfony:symfony .env.prod .env.local
 COPY --chown=symfony:symfony .env.prod .env
 

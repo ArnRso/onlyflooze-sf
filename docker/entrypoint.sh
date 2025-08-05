@@ -99,6 +99,13 @@ warm_cache() {
 
 # Fonction pour compiler les assets
 compile_assets() {
+    echo "📦 Installation des assets importmap..."
+    if php bin/console importmap:install 2>&1; then
+        echo "✅ Assets importmap installés"
+    else
+        echo "⚠️  Erreur installation importmap, mais on continue..."
+    fi
+    
     echo "📦 Compilation des assets..."
     if php bin/console asset-map:compile --env=prod 2>&1; then
         echo "✅ Assets compilés"
