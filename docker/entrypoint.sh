@@ -161,8 +161,10 @@ main() {
     
     echo "🎉 Application initialisée avec succès !"
     echo "🚀 Démarrage de FrankenPHP..."
+    echo "🔍 Commande à exécuter: $@"
     
     # Exécute la commande passée en paramètre
+    echo "📋 Avant exec - PID: $$"
     exec "$@"
 }
 
