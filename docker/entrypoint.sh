@@ -90,15 +90,21 @@ run_migrations() {
 # Fonction pour chauffer le cache
 warm_cache() {
     echo "🔥 Réchauffement du cache..."
-    php bin/console cache:warmup --env=prod
-    echo "✅ Cache réchauffé"
+    if php bin/console cache:warmup --env=prod 2>&1; then
+        echo "✅ Cache réchauffé"
+    else
+        echo "⚠️  Erreur cache warmup, mais on continue..."
+    fi
 }
 
 # Fonction pour compiler les assets
 compile_assets() {
     echo "📦 Compilation des assets..."
-    php bin/console asset-map:compile --env=prod
-    echo "✅ Assets compilés"
+    if php bin/console asset-map:compile --env=prod 2>&1; then
+        echo "✅ Assets compilés"
+    else
+        echo "⚠️  Erreur compilation assets, mais on continue..."
+    fi
 }
 
 # Fonction pour optimiser Composer (déjà fait au build)
