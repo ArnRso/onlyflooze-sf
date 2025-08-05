@@ -30,7 +30,7 @@ wait_for_db() {
     local attempt=1
     local max_attempts=30
     
-    until php bin/console doctrine:query:sql "SELECT 1" > /dev/null 2>&1; do
+    until pg_isready -h $db_host -p 5432 -U $db_user > /dev/null 2>&1; do
         echo "⏳ Tentative $attempt/$max_attempts - Base de données non disponible..."
         
         # Debug détaillé toutes les 5 tentatives
