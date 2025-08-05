@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 set -e
 
 echo "🚀 Démarrage de l'application Symfony avec FrankenPHP..."
@@ -41,11 +41,9 @@ compile_assets() {
     echo "✅ Assets compilés"
 }
 
-# Fonction pour optimiser Composer
+# Fonction pour optimiser Composer (déjà fait au build)
 optimize_autoloader() {
-    echo "⚡ Optimisation de l'autoloader Composer..."
-    composer dump-autoload --optimize --no-dev --classmap-authoritative
-    echo "✅ Autoloader optimisé"
+    echo "⚡ Autoloader déjà optimisé au build"
 }
 
 # Fonction pour créer les répertoires nécessaires
@@ -102,8 +100,8 @@ main() {
     echo "📋 Informations système:"
     echo "   - PHP: $(php -v | head -n1)"
     echo "   - Symfony: $(php bin/console --version)"
-    echo "   - Environment: ${APP_ENV:-prod}"
-    echo "   - Debug: ${APP_DEBUG:-0}"
+    echo "   - Environment: ${APP_ENV-prod}"
+    echo "   - Debug: ${APP_DEBUG-0}"
     
     echo "🎉 Application initialisée avec succès !"
     echo "🚀 Démarrage de FrankenPHP..."
@@ -115,7 +113,5 @@ main() {
 # Gestion des signaux pour un arrêt propre
 trap 'echo "🛑 Arrêt de l'\''application..."; exit 0' SIGTERM SIGINT
 
-# Si le script est exécuté directement, lancer main
-if [ "${BASH_SOURCE[0]}" == "${0}" ]; then
-    main "$@"
-fi
+# Lancer main directement (pas de sourcing en Docker)
+main "$@"
