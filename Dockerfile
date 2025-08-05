@@ -3,16 +3,10 @@
 # =============================================================================
 FROM php:8.3-fpm AS builder
 
-# Installe les dépendances système nécessaires pour le build
+# Installe les dépendances système et extensions PHP
 RUN apt-get update && apt-get install -y \
     git \
     unzip \
-    libpq-dev \
-    libicu-dev \
-    && rm -rf /var/lib/apt/lists/*
-
-# Installe les extensions PHP requises par Symfony
-RUN apt-get install -y \
     libpq-dev \
     libicu-dev \
     libzip-dev \
@@ -20,15 +14,16 @@ RUN apt-get install -y \
     libpng-dev \
     libwebp-dev \
     libfreetype6-dev \
+    && rm -rf /var/lib/apt/lists/* \
     && docker-php-ext-configure gd --with-freetype --with-jpeg --with-webp \
     && docker-php-ext-install -j$(nproc) \
-    pdo_pgsql \
-    pgsql \
-    intl \
-    opcache \
-    zip \
-    gd \
-    exif
+        pdo_pgsql \
+        pgsql \
+        intl \
+        opcache \
+        zip \
+        gd \
+        exif
 
 # Installe Composer
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
@@ -55,6 +50,7 @@ RUN composer dump-autoload --optimize --classmap-authoritative
 
 # Copie la configuration d'environnement de production
 COPY .env.prod .env.local
+COPY .env.prod .env
 
 # Installe les assets de l'importmap (Bootstrap, etc.)
 RUN php bin/console importmap:install
@@ -143,6 +139,7 @@ COPY --from=builder --chown=symfony:symfony /app/var/cache ./var/cache
 # Copie les fichiers de configuration essentiels
 COPY --chown=symfony:symfony composer.json composer.lock symfony.lock ./
 COPY --chown=symfony:symfony .env.prod .env.local
+COPY --chown=symfony:symfony .env.prod .env
 
 # Copie les fichiers Docker
 COPY --chown=root:root docker/entrypoint.sh /usr/local/bin/entrypoint.sh

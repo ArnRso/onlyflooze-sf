@@ -1,7 +1,7 @@
 #!/bin/sh
 set -e
 
-echo "🚀 Démarrage de l'application Symfony avec FrankenPHP..."
+echo "🚀 Démarrage de l'application Symfony avec Nginx + PHP-FPM..."
 
 # Fonction pour extraire le hostname depuis DATABASE_URL
 extract_db_host() {
@@ -197,8 +197,8 @@ main() {
     exec "$@"
 }
 
-# Gestion des signaux pour un arrêt propre
-trap 'echo "🛑 Arrêt de l'\''application..."; exit 0' SIGTERM SIGINT
+# Gestion des signaux pour un arrêt propre (syntaxe sh)
+trap 'echo "🛑 Arrêt de l application..."; exit 0' TERM INT
 
 # Lancer main directement (pas de sourcing en Docker)
 main "$@"
