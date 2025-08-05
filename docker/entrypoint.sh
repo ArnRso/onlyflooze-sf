@@ -180,10 +180,19 @@ main() {
     echo "   - Debug: ${APP_DEBUG-0}"
     
     echo "🎉 Application initialisée avec succès !"
-    echo "🚀 Démarrage de FrankenPHP..."
+    echo "🚀 Démarrage de Nginx + PHP-FPM..."
     echo "🔍 Commande à exécuter: $@"
     
-    # Exécute la commande passée en paramètre
+    # Prépare les répertoires pour PHP-FPM
+    mkdir -p /var/run/php
+    chown www-data:www-data /var/run/php
+    
+    # Prépare les logs
+    mkdir -p /var/log/supervisor
+    touch /var/log/php-fpm-error.log /var/log/php-fpm-slow.log
+    chown www-data:www-data /var/log/php-fpm-*.log
+    
+    # Exécute la commande passée en paramètre (Supervisor)
     echo "📋 Avant exec - PID: $$"
     exec "$@"
 }

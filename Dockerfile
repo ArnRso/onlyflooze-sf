@@ -1,7 +1,7 @@
 # =============================================================================
 # STAGE 1: Builder - Installation des dépendances et compilation
 # =============================================================================
-FROM dunglas/frankenphp:1-php8.3 AS builder
+FROM php:8.3-fpm AS builder
 
 # Installe les dépendances système nécessaires pour le build
 RUN apt-get update && apt-get install -y \
@@ -12,7 +12,16 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 # Installe les extensions PHP requises par Symfony
-RUN install-php-extensions \
+RUN apt-get install -y \
+    libpq-dev \
+    libicu-dev \
+    libzip-dev \
+    libjpeg62-turbo-dev \
+    libpng-dev \
+    libwebp-dev \
+    libfreetype6-dev \
+    && docker-php-ext-configure gd --with-freetype --with-jpeg --with-webp \
+    && docker-php-ext-install -j$(nproc) \
     pdo_pgsql \
     pgsql \
     intl \
@@ -64,20 +73,30 @@ RUN rm -rf \
     /root/.composer/cache
 
 # =============================================================================
-# STAGE 2: Runtime - Image finale légère pour la production
+# STAGE 2: Runtime - Nginx + PHP-FPM pour la production
 # =============================================================================
-FROM dunglas/frankenphp:1-php8.3-alpine AS runtime
+FROM php:8.3-fpm AS runtime
 
-# Installe seulement les dépendances runtime nécessaires (Alpine packages)
-RUN apk add --no-cache \
+# Installe Nginx et les dépendances nécessaires
+RUN apt-get update && apt-get install -y \
+    nginx \
     postgresql-client \
-    icu-libs \
+    libpq-dev \
+    libicu-dev \
+    libzip-dev \
+    libjpeg62-turbo-dev \
+    libpng-dev \
+    libwebp-dev \
+    libfreetype6-dev \
+    supervisor \
+    curl \
     netcat-openbsd \
-    bind-tools \
-    && rm -rf /var/cache/apk/*
+    dnsutils \
+    && rm -rf /var/lib/apt/lists/*
 
-# Installe les extensions PHP nécessaires (même liste que builder)
-RUN install-php-extensions \
+# Installe les extensions PHP (même liste que builder)
+RUN docker-php-ext-configure gd --with-freetype --with-jpeg --with-webp \
+    && docker-php-ext-install -j$(nproc) \
     pdo_pgsql \
     pgsql \
     intl \
@@ -88,9 +107,19 @@ RUN install-php-extensions \
 
 # Configure PHP pour la production
 COPY docker/php-prod.ini /usr/local/etc/php/conf.d/zzz-prod.ini
+COPY docker/php-fpm.conf /usr/local/etc/php-fpm.d/www.conf
+
+# Configure Nginx
+COPY docker/nginx.conf /etc/nginx/nginx.conf
+COPY docker/default.conf /etc/nginx/sites-available/default
+RUN rm -f /etc/nginx/sites-enabled/default \
+    && ln -sf /etc/nginx/sites-available/default /etc/nginx/sites-enabled/default
+
+# Configure Supervisor pour gérer Nginx + PHP-FPM
+COPY docker/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 
 # Crée un utilisateur non-root
-RUN addgroup -g 1000 symfony && adduser -u 1000 -G symfony -s /bin/sh -D symfony
+RUN groupadd -r symfony && useradd -r -g symfony symfony
 
 # Crée les répertoires nécessaires avec les bonnes permissions
 RUN mkdir -p /app/var/cache /app/var/log /app/var/sessions /app/var/uploads \
@@ -116,15 +145,16 @@ COPY --chown=symfony:symfony composer.json composer.lock symfony.lock ./
 COPY --chown=symfony:symfony .env.prod .env.local
 
 # Copie les fichiers Docker
-COPY --chown=root:root docker/Caddyfile /etc/caddy/Caddyfile
 COPY --chown=root:root docker/entrypoint.sh /usr/local/bin/entrypoint.sh
 RUN chmod +x /usr/local/bin/entrypoint.sh
 
-# Bascule vers l'utilisateur non-root
-USER symfony
+# Configure les permissions Nginx
+RUN chown -R www-data:www-data /var/log/nginx \
+    && chown -R www-data:www-data /var/lib/nginx \
+    && chown -R www-data:www-data /run
 
-# Expose les ports
-EXPOSE 80 443
+# Expose le port HTTP
+EXPOSE 80
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
@@ -133,5 +163,5 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
 # Utilise le script d'entrypoint
 ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
 
-# Commande par défaut : démarre FrankenPHP avec worker mode
-CMD ["frankenphp", "run", "--config", "/etc/caddy/Caddyfile"]
+# Commande par défaut : démarre Supervisor (Nginx + PHP-FPM)
+CMD ["supervisord", "-c", "/etc/supervisor/conf.d/supervisord.conf", "-n"]

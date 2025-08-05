@@ -7,10 +7,9 @@ services:
       dockerfile: Dockerfile
     ports:
       - "80:80"
-      - "443:443"
     environment:
       - APP_ENV=prod
-      - DATABASE_URL=postgresql://${POSTGRES_USER:-app}:${POSTGRES_PASSWORD:-!ChangeMe!}@database:5432/${POSTGRES_DB:-app}?serverVersion=16&charset=utf8
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-app}:${POSTGRES_PASSWORD:-!ChangeMe!}@onlyflooze_db:5432/${POSTGRES_DB:-app}?serverVersion=16&charset=utf8
     volumes:
       # Volume pour les logs
       - app_logs:/app/var/log
