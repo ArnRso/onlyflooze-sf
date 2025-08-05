@@ -187,6 +187,13 @@ main() {
     mkdir -p /var/run/php
     chown www-data:www-data /var/run/php
     
+    # Assure les permissions sur le cache et les répertoires Symfony
+    chown -R www-data:www-data /app/var
+    chmod -R 755 /app/var
+    
+    # Assure les permissions sur /tmp pour Symfony
+    chmod 777 /tmp
+    
     # Prépare les logs
     mkdir -p /var/log/supervisor
     touch /var/log/php-fpm-error.log /var/log/php-fpm-slow.log
