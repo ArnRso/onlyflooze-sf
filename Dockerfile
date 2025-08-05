@@ -145,10 +145,11 @@ COPY --chown=symfony:symfony .env.prod .env
 COPY --chown=root:root docker/entrypoint.sh /usr/local/bin/entrypoint.sh
 RUN chmod +x /usr/local/bin/entrypoint.sh
 
-# Configure les permissions Nginx
+# Configure les permissions Nginx et Symfony
 RUN chown -R www-data:www-data /var/log/nginx \
     && chown -R www-data:www-data /var/lib/nginx \
-    && chown -R www-data:www-data /run
+    && chown -R www-data:www-data /run \
+    && chown -R www-data:www-data /app/var
 
 # Expose le port HTTP
 EXPOSE 80
