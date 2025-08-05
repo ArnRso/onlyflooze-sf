@@ -1,0 +1,97 @@
+{
+    # Configuration globale FrankenPHP
+    frankenphp {
+        # Active le mode worker pour de meilleures performances
+        worker ./public/index.php
+        # Nombre de workers (ajustez selon vos besoins)
+        num_workers 4
+    }
+    
+    # Configuration du serveur
+    auto_https off
+    # Écoute sur le port 80 pour HTTP
+    http_port 80
+}
+
+# Configuration du site
+:80, :443 {
+    # Répertoire racine de l'application Symfony
+    root * /app/public
+    
+    # Compression gzip
+    encode gzip zstd
+    
+    # Configuration des en-têtes de sécurité
+    header {
+        # Sécurité renforcée
+        Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+        X-Content-Type-Options "nosniff"
+        X-Frame-Options "DENY"
+        X-XSS-Protection "1; mode=block"
+        Referrer-Policy "strict-origin-when-cross-origin"
+        # Retirez X-Powered-By pour la sécurité
+        -X-Powered-By
+        -Server
+    }
+    
+    # Gestion des assets statiques avec cache long
+    @static {
+        path *.css *.js *.png *.jpg *.jpeg *.gif *.ico *.svg *.woff *.woff2 *.ttf *.eot *.pdf
+    }
+    
+    handle @static {
+        header Cache-Control "public, max-age=31536000, immutable"
+        file_server
+    }
+    
+    # Réécritures pour Symfony
+    @symfony_rewrite {
+        not path *.css *.js *.png *.jpg *.jpeg *.gif *.ico *.svg *.woff *.woff2 *.ttf *.eot *.pdf
+        file {
+            try_files {path} /index.php
+        }
+    }
+    
+    # Route toutes les requêtes vers Symfony
+    handle @symfony_rewrite {
+        # Configuration spécifique pour FrankenPHP
+        php_fastcgi {
+            env SERVER_NAME {host}
+            env REQUEST_SCHEME {scheme}
+            env REQUEST_URI {uri}
+            env PATH_INFO {path}
+            # Variables d'environnement Symfony
+            env APP_ENV production
+            env APP_DEBUG 0
+        }
+    }
+    
+    # Gestion des erreurs
+    handle_errors {
+        @404 {
+            expression {http.error.status_code} == 404
+        }
+        rewrite @404 /index.php
+    }
+    
+    # Configuration des logs
+    log {
+        output stdout
+        format json
+        level INFO
+    }
+    
+    # Health check endpoint
+    handle /health {
+        respond "OK" 200
+    }
+    
+    # Bloque l'accès aux fichiers sensibles
+    @forbidden {
+        path /.env* /composer.json /composer.lock /symfony.lock /.git/* /var/* /config/* /src/* /tests/*
+    }
+    
+    handle @forbidden {
+        respond "Forbidden" 403
+    }
+}
