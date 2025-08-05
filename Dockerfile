@@ -47,6 +47,9 @@ RUN composer dump-autoload --optimize --classmap-authoritative
 # Copie la configuration d'environnement de production
 COPY .env.prod .env.local
 
+# Installe les assets de l'importmap (Bootstrap, etc.)
+RUN php bin/console importmap:install
+
 # Compile les assets Symfony
 RUN php bin/console asset-map:compile --env=prod
 
