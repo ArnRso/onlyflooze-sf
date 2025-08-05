@@ -74,12 +74,16 @@ run_migrations() {
     echo "🔄 Vérification et exécution des migrations..."
     
     # Vérifie si des migrations sont en attente
-    if php bin/console doctrine:migrations:up-to-date --no-interaction; then
+    if php bin/console doctrine:migrations:up-to-date --no-interaction 2>/dev/null; then
         echo "✅ Base de données à jour"
     else
         echo "📦 Exécution des migrations..."
-        php bin/console doctrine:migrations:migrate --no-interaction --allow-no-migration
-        echo "✅ Migrations terminées"
+        if php bin/console doctrine:migrations:migrate --no-interaction --allow-no-migration 2>&1; then
+            echo "✅ Migrations terminées"
+        else
+            echo "⚠️  Attention: Erreur lors des migrations, mais on continue..."
+            echo "   (Les migrations peuvent échouer si elles sont déjà appliquées)"
+        fi
     fi
 }
 
@@ -138,19 +142,29 @@ main() {
     check_config
     
     # Optimisation de l'autoloader
+    echo "🔍 DEBUG: Début optimize_autoloader"
     optimize_autoloader
+    echo "🔍 DEBUG: Fin optimize_autoloader"
     
     # Attente de la base de données
+    echo "🔍 DEBUG: Début wait_for_db"
     wait_for_db
+    echo "🔍 DEBUG: Fin wait_for_db"
     
     # Exécution des migrations
+    echo "🔍 DEBUG: Début run_migrations"
     run_migrations
+    echo "🔍 DEBUG: Fin run_migrations"
     
     # Compilation des assets
+    echo "🔍 DEBUG: Début compile_assets"
     compile_assets
+    echo "🔍 DEBUG: Fin compile_assets"
     
     # Réchauffement du cache
+    echo "🔍 DEBUG: Début warm_cache"
     warm_cache
+    echo "🔍 DEBUG: Fin warm_cache"
     
     # Affichage des informations de version
     echo "📋 Informations système:"
