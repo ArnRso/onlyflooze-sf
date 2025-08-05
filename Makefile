@@ -48,17 +48,30 @@ docker-setup-buildx: ## Setup Docker buildx for multi-platform builds
 	@docker buildx inspect --bootstrap
 	@echo "✅ Buildx setup completed!"
 
-docker-build-multi: docker-setup-buildx ## Build multi-platform image and cache locally
+docker-build-multi: docker-setup-buildx ## Build multi-platform image and cache locally (AMD64 + ARM64)
 	@echo "🏗️  Building multi-platform Docker image with local cache..."
 	@echo "📦 Platforms: linux/amd64, linux/arm64"
 	@echo "📦 Tags: $(DOCKER_TAG_LATEST), $(DOCKER_TAG_SHA)"
 	@echo "⚠️  Note: Multi-platform images are cached but not loaded to Docker daemon"
+	@echo "⏱️  Warning: This can take 20-30 minutes due to ARM64 emulation"
 	docker buildx build \
 		--platform linux/amd64,linux/arm64 \
 		-t $(DOCKER_TAG_LATEST) \
 		-t $(DOCKER_TAG_SHA) \
 		.
 	@echo "✅ Multi-platform build completed and cached!"
+
+docker-build-fast: docker-setup-buildx ## Build for AMD64 only (faster, ~5 minutes)
+	@echo "🚀 Building Docker image for AMD64 only (fast build)..."
+	@echo "📦 Platform: linux/amd64"
+	@echo "📦 Tags: $(DOCKER_TAG_LATEST), $(DOCKER_TAG_SHA)"
+	docker buildx build \
+		--platform linux/amd64 \
+		-t $(DOCKER_TAG_LATEST) \
+		-t $(DOCKER_TAG_SHA) \
+		--load \
+		.
+	@echo "✅ Fast AMD64 build completed and loaded to Docker daemon!"
 
 docker-build-local: ## Build for current platform and load to Docker daemon
 	@echo "🏗️  Building Docker image for current platform..."
