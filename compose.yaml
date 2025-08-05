@@ -1,10 +1,11 @@
 
 services:
-  # Service principal avec FrankenPHP
-  web:
+  # Service principal avec Nginx + PHP-FPM
+  onlyflooze_web:
     build:
       context: .
       dockerfile: Dockerfile
+    container_name: onlyflooze_web
     ports:
       - "80:80"
     environment:
@@ -16,7 +17,7 @@ services:
       # Volume pour les uploads (si nécessaire)
       - app_uploads:/app/var/uploads
     depends_on:
-      database:
+      onlyflooze_db:
         condition: service_healthy
     restart: unless-stopped
     healthcheck:
@@ -27,8 +28,9 @@ services:
       start_period: 40s
 
 ###> doctrine/doctrine-bundle ###
-  database:
+  onlyflooze_db:
     image: postgres:${POSTGRES_VERSION:-16}-alpine
+    container_name: onlyflooze_db
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-app}
       # You should definitely change the password in production
