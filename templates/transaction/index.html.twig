@@ -4,21 +4,6 @@
 
 {% block stylesheets %}
     {{ parent() }}
-    <style>
-        .is-warning {
-            border-color: #ffc107;
-            box-shadow: 0 0 0 0.2rem rgba(255, 193, 7, 0.25);
-        }
-
-        .tag-item {
-            transition: transform 0.2s ease, opacity 0.2s ease;
-        }
-
-        .suggestion-tag:hover {
-            opacity: 0.8;
-            transform: scale(1.05);
-        }
-    </style>
 {% endblock %}
 
 {% block javascripts %}
@@ -30,7 +15,7 @@
 {% block body %}
     <div class="container py-4">
         <div class="d-flex justify-content-between align-items-center mb-4">
-            <h1 class="h3 text-primary">💰 Mes Transactions</h1>
+            <h1 class="h2 text-primary">💰 Mes Transactions</h1>
             <div class="btn-group">
                 <button class="btn btn-outline-primary" type="button" data-bs-toggle="collapse"
                         data-bs-target="#searchForm">
@@ -317,8 +302,7 @@
                                         {% endif %}
                                     </td>
                                     <td class="text-end">
-                                        <span
-                                            class="{% if transaction.amountAsFloat >= 0 %}text-success{% else %}text-danger{% endif %} fw-bold">
+                                        <span class="{% if transaction.amountAsFloat >= 0 %}amount-positive{% else %}amount-negative{% endif %} fw-bold">
                                             {{ transaction.amount|number_format(2, ',', ' ') }}&nbsp;€
                                         </span>
                                     </td>

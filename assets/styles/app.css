@@ -1,1 +1,46 @@
+/* OnlyFlooze - Styles personnalisés */
 
+/* Styles pour les formulaires de recherche et les tags */
+.is-warning {
+    border-color: #ffc107;
+    box-shadow: 0 0 0 0.2rem rgba(255, 193, 7, 0.25);
+}
+
+.tag-item {
+    transition: transform 0.2s ease, opacity 0.2s ease;
+}
+
+.suggestion-tag:hover {
+    opacity: 0.8;
+    transform: scale(1.05);
+}
+
+/* Amélioration de l'affichage des montants */
+.amount-positive {
+    color: var(--bs-success) !important;
+}
+
+.amount-negative {
+    color: var(--bs-danger) !important;
+}
+
+/* Espacement cohérent pour les conteneurs principaux */
+.main-container {
+    padding-top: 1.5rem;
+    padding-bottom: 1.5rem;
+}
+
+/* Style pour les cartes avec ombres */
+.card-shadow {
+    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+}
+
+/* Animation pour les éléments interactifs */
+.btn:hover {
+    transform: translateY(-1px);
+    transition: transform 0.2s ease;
+}
+
+.table-hover tbody tr:hover {
+    background-color: rgba(0, 0, 0, 0.05);
+}
