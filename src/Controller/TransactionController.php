@@ -137,10 +137,27 @@ class TransactionController extends AbstractController
     {
         $this->denyAccessUnlessGranted(TransactionVoter::EDIT, $transaction);
 
+        /** @var User $user */
+        $user = $this->getUser();
+        $tags = $this->tagRepository->findBy(['user' => $user], ['name' => 'ASC']);
+
         $form = $this->createForm(TransactionType::class, $transaction);
         $form->handleRequest($request);
 
         if ($form->isSubmitted() && $form->isValid()) {
+            // Traitement des nouveaux tags s'ils existent
+            $newTags = $request->request->all('new_tags');
+            if (!empty($newTags)) {
+                foreach ($newTags as $newTagData) {
+                    if (!empty($newTagData['name'])) {
+                        $tag = new Tag();
+                        $tag->setName(trim($newTagData['name']));
+                        $this->tagService->createTag($tag, $user);
+                        $transaction->addTag($tag);
+                    }
+                }
+            }
+
             $this->transactionService->updateTransaction($transaction);
 
             $this->addFlash('success', 'Transaction modifiée avec succès.');
@@ -151,6 +168,7 @@ class TransactionController extends AbstractController
         return $this->render('transaction/edit.html.twig', [
             'transaction' => $transaction,
             'form' => $form,
+            'tags' => $tags,
         ]);
     }
 

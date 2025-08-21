@@ -36,6 +36,14 @@ return [
         'path' => './assets/transaction-management.js',
         'entrypoint' => true,
     ],
+    'transaction-edit-tags' => [
+        'path' => './assets/transaction-edit-tags.js',
+        'entrypoint' => true,
+    ],
+    'js/tag-manager.js' => [
+        'path' => './assets/js/tag-manager.js',
+        'entrypoint' => false,
+    ],
     'bootstrap' => [
         'version' => '5.3.7',
     ],
