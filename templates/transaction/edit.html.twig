@@ -2,72 +2,131 @@
 
 {% block title %}Modifier Transaction - OnlyFlooze{% endblock %}
 
+{% block javascripts %}
+    {{ parent() }}
+    {{ importmap('transaction-edit-tags') }}
+{% endblock %}
+
 {% block body %}
     <div class="container py-4">
-        <div class="row justify-content-center">
-            <div class="col-md-8 col-lg-6">
-                <div class="card shadow">
-                    <div class="card-header bg-warning text-dark">
-                        <h4 class="mb-0">✏️ Modifier la Transaction</h4>
-                    </div>
-                    <div class="card-body">
-                        {{ form_start(form) }}
-                        <div class="mb-3">
-                            {{ form_row(form.label) }}
-                        </div>
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h1 class="h2 text-warning">✏️ Modifier la Transaction</h1>
+            <a href="{{ path('app_transaction_index') }}" class="btn btn-outline-secondary">
+                <i class="fas fa-arrow-left"></i> Retour à la liste
+            </a>
+        </div>
+        {{ form_start(form) }}
+        <div class="mb-3">
+            {{ form_row(form.label) }}
+        </div>
 
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    {{ form_row(form.transactionDate) }}
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    {{ form_row(form.amount) }}
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="mb-3">
-                            {{ form_row(form.tags) }}
-                        </div>
-
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    {{ form_row(form.budgetMonth) }}
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    {{ form_row(form.recurringTransaction) }}
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="mb-4">
-                            {{ form_row(form.info) }}
-                        </div>
-
-                        <div class="d-grid gap-2 d-md-flex justify-content-md-between">
-                            <a href="{{ path('app_transaction_show', {'id': transaction.id}) }}"
-                               class="btn btn-outline-info">
-                                <i class="fas fa-eye"></i> Voir
-                            </a>
-                            <div>
-                                <a href="{{ path('app_transaction_index') }}" class="btn btn-secondary me-2">
-                                    <i class="fas fa-arrow-left"></i> Retour
-                                </a>
-                                <button type="submit" class="btn btn-warning">
-                                    <i class="fas fa-save"></i> Enregistrer
-                                </button>
-                            </div>
-                        </div>
-                        {{ form_end(form) }}
-                    </div>
+        <div class="row">
+            <div class="col-md-6">
+                <div class="mb-3">
+                    {{ form_row(form.transactionDate) }}
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="mb-3">
+                    {{ form_row(form.amount) }}
                 </div>
             </div>
         </div>
+
+        <div class="mb-3">
+            {{ form_label(form.tags) }}
+
+            <!-- Système visuel de sélection de tags -->
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label class="form-label">Tags existants</label>
+                    <div id="existing-tags-visual" class="border rounded p-3"
+                         style="min-height: 150px; max-height: 200px; overflow-y: auto;">
+                        {% for tag in tags %}
+                            <div class="tag-item d-inline-block m-1 position-relative"
+                                 data-tag-id="{{ tag.id }}"
+                                 data-tag-name="{{ tag.name }}"
+                                 style="cursor: pointer;">
+                                                <span class="badge fs-6 py-2 px-3"
+                                                      style="background-color: {{ tag.color }}; color: white;">
+                                                    {{ tag.name }}
+                                                </span>
+                                <i class="fas fa-check position-absolute top-0 start-100 translate-middle bg-success text-white rounded-circle p-1 tag-check"
+                                   style="font-size: 0.7rem; {% if tag in transaction.tags %}display: block;{% else %}display: none;{% endif %}"></i>
+                            </div>
+                        {% endfor %}
+                    </div>
+                    <small class="form-text text-muted">Cliquez sur les tags pour les sélectionner</small>
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label for="new_tags" class="form-label">Nouveaux tags</label>
+                    <div id="new-tags-container">
+                        <div class="new-tag-input mb-2">
+                            <div class="input-group">
+                                <input type="text" class="form-control new-tag-name-input"
+                                       name="new_tags[0][name]" placeholder="Nom du tag">
+                                <button type="button" class="btn btn-outline-danger remove-tag-input">
+                                    <i class="fas fa-minus"></i>
+                                </button>
+                            </div>
+                            <small class="form-text text-muted duplicate-warning" style="display: none;">
+                                <i class="fas fa-exclamation-triangle text-warning"></i> Ce tag existe déjà
+                            </small>
+                            <div class="similar-tags-suggestions" style="display: none;">
+                                <small class="form-text text-info">
+                                    <i class="fas fa-lightbulb"></i> Tags similaires :
+                                </small>
+                                <div class="similar-tags-list mt-1"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <button type="button" class="btn btn-outline-primary btn-sm" id="add-tag-input">
+                        <i class="fas fa-plus"></i> Ajouter un tag
+                    </button>
+                </div>
+            </div>
+
+            <!-- Checkboxes cachés pour les tags existants -->
+            {% for tag in tags %}
+                <input type="checkbox" class="d-none existing-tag-checkbox"
+                       name="transaction[tags][]"
+                       value="{{ tag.id }}"
+                       id="tag_{{ tag.id }}"
+                       {% if tag in transaction.tags %}checked{% endif %}>
+            {% endfor %}
+
+            <!-- Input caché pour le champ original du formulaire -->
+            <div class="d-none">
+                {{ form_widget(form.tags) }}
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-md-6">
+                <div class="mb-3">
+                    {{ form_row(form.budgetMonth) }}
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="mb-3">
+                    {{ form_row(form.recurringTransaction) }}
+                </div>
+            </div>
+        </div>
+
+        <div class="mb-4">
+            {{ form_row(form.info) }}
+        </div>
+
+        <div class="d-flex justify-content-between align-items-center">
+            <a href="{{ path('app_transaction_show', {'id': transaction.id}) }}"
+               class="btn btn-outline-info">
+                <i class="fas fa-eye"></i> Voir la transaction
+            </a>
+            <button type="submit" class="btn btn-warning">
+                <i class="fas fa-save"></i> Enregistrer les modifications
+            </button>
+        </div>
+        {{ form_end(form) }}
     </div>
 {% endblock %}
