@@ -262,10 +262,12 @@ readonly class RecurringTransactionService
                 $recap['totals']['already_out'] += abs($totalPaidAmount);
             }
 
-            if ($totalExpectedAmount > 0) {
-                $recap['totals']['expected_in'] += $totalExpectedAmount;
-            } elseif ($totalExpectedAmount < 0) {
-                $recap['totals']['expected_out'] += abs($totalExpectedAmount);
+            // Pour les prévus, calculer ce qui RESTE à faire
+            $remainingExpectedAmount = $totalExpectedAmount - $totalPaidAmount;
+            if ($remainingExpectedAmount > 0) {
+                $recap['totals']['expected_in'] += $remainingExpectedAmount;
+            } elseif ($remainingExpectedAmount < 0) {
+                $recap['totals']['expected_out'] += abs($remainingExpectedAmount);
             }
         }
 
