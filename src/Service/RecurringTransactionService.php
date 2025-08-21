@@ -197,7 +197,15 @@ readonly class RecurringTransactionService
 
         $recap = [
             'recurring_transactions' => [],
-            'totals' => ['expected' => 0, 'paid' => 0, 'remaining' => 0],
+            'totals' => [
+                'expected' => 0,
+                'paid' => 0,
+                'remaining' => 0,
+                'already_out' => 0,      // Déjà sorti (montants négatifs réalisés)
+                'already_in' => 0,       // Déjà rentré (montants positifs réalisés)
+                'expected_out' => 0,     // Prévu à sortir (montants négatifs attendus)
+                'expected_in' => 0       // Prévu à rentrer (montants positifs attendus)
+            ],
             'available_months' => $this->getAvailableMonths($user),
         ];
 
@@ -246,6 +254,19 @@ readonly class RecurringTransactionService
             // Calculer les totaux
             $recap['totals']['expected'] += $totalExpectedAmount;
             $recap['totals']['paid'] += $totalPaidAmount;
+
+            // Calculer les 4 nouveaux indicateurs
+            if ($totalPaidAmount > 0) {
+                $recap['totals']['already_in'] += $totalPaidAmount;
+            } elseif ($totalPaidAmount < 0) {
+                $recap['totals']['already_out'] += abs($totalPaidAmount);
+            }
+
+            if ($totalExpectedAmount > 0) {
+                $recap['totals']['expected_in'] += $totalExpectedAmount;
+            } elseif ($totalExpectedAmount < 0) {
+                $recap['totals']['expected_out'] += abs($totalExpectedAmount);
+            }
         }
 
         $recap['totals']['remaining'] = $recap['totals']['expected'] - $recap['totals']['paid'];
