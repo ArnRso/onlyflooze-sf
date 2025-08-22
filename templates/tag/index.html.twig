@@ -59,8 +59,9 @@
                             <thead class="table-light">
                             <tr>
                                 <th>Tag</th>
-                                <th>Couleur</th>
-                                <th class="text-center">Transactions</th>
+                                <th class="text-center">Total</th>
+                                <th class="text-center">Mois en cours</th>
+                                <th class="text-center">Mois précédent</th>
                                 <th>Créé le</th>
                                 <th class="text-center">Actions</th>
                             </tr>
@@ -69,19 +70,36 @@
                             {% for item in tags %}
                                 {% set tag = item[0] %}
                                 {% set transactionCount = item.transactionCount %}
+                                {% set currentMonth = item.currentMonth %}
+                                {% set previousMonth = item.previousMonth %}
                                 <tr>
                                     <td>
                                         {% include 'components/tag.html.twig' with {'tag': tag} %}
                                     </td>
-                                    <td>
-                                        <div class="d-flex align-items-center">
-                                            <div class="rounded me-2"
-                                                 style="width: 20px; height: 20px; background-color: {{ tag.color }};"></div>
-                                            <small class="text-muted">{{ tag.color }}</small>
-                                        </div>
-                                    </td>
                                     <td class="text-center">
                                         <span class="badge bg-secondary">{{ transactionCount }}</span>
+                                    </td>
+                                    <td class="text-center">
+                                        {% if currentMonth.count > 0 %}
+                                            <div><span class="badge bg-primary">{{ currentMonth.count }}</span></div>
+                                            <div><small
+                                                    class="{% if currentMonth.total >= 0 %}text-success{% else %}text-danger{% endif %} fw-bold">
+                                                    {{ currentMonth.total|number_format(2, ',', ' ') }}&nbsp;€
+                                                </small></div>
+                                        {% else %}
+                                            <span class="text-muted">-</span>
+                                        {% endif %}
+                                    </td>
+                                    <td class="text-center">
+                                        {% if previousMonth.count > 0 %}
+                                            <div><span class="badge bg-info">{{ previousMonth.count }}</span></div>
+                                            <div><small
+                                                    class="{% if previousMonth.total >= 0 %}text-success{% else %}text-danger{% endif %} fw-bold">
+                                                    {{ previousMonth.total|number_format(2, ',', ' ') }}&nbsp;€
+                                                </small></div>
+                                        {% else %}
+                                            <span class="text-muted">-</span>
+                                        {% endif %}
                                     </td>
                                     <td>
                                         <small class="text-muted">{{ tag.createdAt|date('d/m/Y') }}</small>

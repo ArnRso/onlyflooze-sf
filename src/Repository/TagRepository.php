@@ -90,4 +90,21 @@ class TagRepository extends ServiceEntityRepository
             ->getQuery()
             ->getResult();
     }
+
+    /**
+     * Récupère les tags d'un utilisateur avec leurs transactions pré-chargées
+     * @return Tag[]
+     */
+    public function findByUserWithTransactions(User $user): array
+    {
+        return $this->createQueryBuilder('t')
+            ->leftJoin('t.transactions', 'tr')
+            ->addSelect('tr')
+            ->andWhere('t.user = :user')
+            ->setParameter('user', $user)
+            ->orderBy('t.name', 'ASC')
+            ->addOrderBy('tr.transactionDate', 'DESC')
+            ->getQuery()
+            ->getResult();
+    }
 }
