@@ -43,11 +43,49 @@ readonly class TagService
     }
 
     /**
-     * @return array<int, array{0: Tag, transactionCount: int}>
+     * @return array<int, array{0: Tag, transactionCount: int, currentMonth: array{count: int, total: float}, previousMonth: array{count: int, total: float}}>
      */
     public function getUserTagsWithTransactionCount(User $user): array
     {
-        return $this->tagRepository->findByUserWithTransactionCount($user);
+        // Récupérer les tags avec leurs transactions pré-chargées pour éviter le problème N+1
+        $tagsWithTransactions = $this->tagRepository->findByUserWithTransactions($user);
+
+        // Calculer le mois courant et précédent
+        $currentMonth = date('Y-m');
+        $previousMonth = date('Y-m', strtotime('-1 month'));
+
+        $result = [];
+
+        // Traiter chaque tag
+        foreach ($tagsWithTransactions as $tag) {
+            $transactions = $tag->getTransactions();
+            $transactionCount = $transactions->count();
+
+            $currentMonthStats = ['count' => 0, 'total' => 0.0];
+            $previousMonthStats = ['count' => 0, 'total' => 0.0];
+
+            // Parcourir les transactions pré-chargées (pas de requête N+1)
+            foreach ($transactions as $transaction) {
+                $budgetMonth = $transaction->getBudgetMonth();
+
+                if ($budgetMonth === $currentMonth) {
+                    $currentMonthStats['count']++;
+                    $currentMonthStats['total'] += $transaction->getAmountAsFloat();
+                } elseif ($budgetMonth === $previousMonth) {
+                    $previousMonthStats['count']++;
+                    $previousMonthStats['total'] += $transaction->getAmountAsFloat();
+                }
+            }
+
+            $result[] = [
+                0 => $tag,
+                'transactionCount' => $transactionCount,
+                'currentMonth' => $currentMonthStats,
+                'previousMonth' => $previousMonthStats,
+            ];
+        }
+
+        return $result;
     }
 
     /**
