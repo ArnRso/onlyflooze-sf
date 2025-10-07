@@ -15,6 +15,27 @@ help: ## Show this help message
 phpstan: ## Run PHPStan static analysis
 	php -d memory_limit=512M vendor/bin/phpstan analyse
 
+php-cs-fixer: ## Check PHP code style with PHP CS Fixer
+	vendor/bin/php-cs-fixer fix --dry-run --diff
+
+php-cs-fixer-fix: ## Fix PHP code style with PHP CS Fixer
+	vendor/bin/php-cs-fixer fix
+
+twigcs: ## Check Twig templates with TwigCS
+	vendor/bin/twigcs templates
+
+eslint: ## Check JavaScript code with ESLint
+	npm run lint:js
+
+eslint-fix: ## Fix JavaScript code with ESLint
+	npm run lint:js:fix
+
+lint: phpstan php-cs-fixer twigcs eslint ## Run all linting tools
+
+lint-fix: php-cs-fixer-fix eslint-fix ## Fix code with all fixers
+
+quality: lint ## Alias for lint command
+
 test: ## Run PHPUnit tests
 	vendor/bin/phpunit
 

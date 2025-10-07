@@ -1,0 +1,18 @@
+{
+  "name": "onlyflooze_sf",
+  "version": "1.0.0",
+  "description": "Symfony application for budget management",
+  "main": "index.js",
+  "scripts": {
+    "lint:js": "eslint 'assets/**/*.js'",
+    "lint:js:fix": "eslint 'assets/**/*.js' --fix"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "module",
+  "devDependencies": {
+    "@eslint/js": "^9.36.0",
+    "eslint": "^9.36.0"
+  }
+}
