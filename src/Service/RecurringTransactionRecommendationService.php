@@ -12,20 +12,26 @@ use Doctrine\ORM\OptimisticLockException;
 /**
  * Service intelligent pour recommander des transactions récurrentes pour une transaction.
  *
- * Utilise plusieurs stratégies :
- * 1. Correspondance exacte du label (95% confiance)
- * 2. Correspondance par mots-clés (60-85% confiance)
- * 3. Montant similaire (40-60% confiance)
- * 4. Transactions récurrentes fréquentes (20-30% confiance)
+ * Utilise plusieurs stratégies basées sur l'analyse des labels :
+ * 1. Correspondance exacte du label avec scoring bayésien (75-95% confiance)
+ * 2. Correspondance par similarité floue (70-85% confiance selon degré de similarité)
+ * 3. Correspondance par mots-clés avec normalisation (60-80% confiance)
+ * 4. Transactions récurrentes fréquentes comme fallback (20-30% confiance)
  */
 class RecurringTransactionRecommendationService
 {
-    private const float CONFIDENCE_EXACT_MATCH = 95.0;
-    private const float CONFIDENCE_KEYWORD_STRONG = 85.0;
+    private const float CONFIDENCE_FUZZY_MATCH_HIGH = 85.0;
+    private const float CONFIDENCE_FUZZY_MATCH_MEDIUM = 80.0;
+    private const float CONFIDENCE_FUZZY_MATCH_LOW = 75.0;
+    private const float CONFIDENCE_KEYWORD_STRONG = 80.0;
     private const float CONFIDENCE_KEYWORD_MEDIUM = 70.0;
     private const float CONFIDENCE_KEYWORD_WEAK = 60.0;
-    private const float CONFIDENCE_AMOUNT_PATTERN = 50.0;
     private const float CONFIDENCE_FREQUENT = 25.0;
+
+    // Seuils de similarité pour fuzzy matching (en pourcentage)
+    private const float SIMILARITY_THRESHOLD_HIGH = 95.0;
+    private const float SIMILARITY_THRESHOLD_MEDIUM = 90.0;
+    private const float SIMILARITY_THRESHOLD_LOW = 85.0;
 
     public function __construct(
         private readonly EntityManagerInterface         $entityManager
@@ -55,13 +61,13 @@ class RecurringTransactionRecommendationService
         $exactMatchRecommendations = $this->findByExactLabel($transaction);
         $recommendations = array_merge($recommendations, $exactMatchRecommendations);
 
-        // Stratégie 2 : Correspondance par mots-clés
+        // Stratégie 2 : Correspondance par similarité floue (labels presque identiques)
+        $fuzzyMatchRecommendations = $this->findBySimilarLabels($transaction);
+        $recommendations = array_merge($recommendations, $fuzzyMatchRecommendations);
+
+        // Stratégie 3 : Correspondance par mots-clés
         $keywordRecommendations = $this->findByKeywordMatching($transaction);
         $recommendations = array_merge($recommendations, $keywordRecommendations);
-
-        // Stratégie 3 : Montant similaire
-        $amountRecommendations = $this->findByAmountPattern($transaction);
-        $recommendations = array_merge($recommendations, $amountRecommendations);
 
         // Stratégie 4 : Transactions récurrentes fréquentes (fallback)
         if (count($recommendations) < $limit) {
@@ -83,6 +89,7 @@ class RecurringTransactionRecommendationService
 
     /**
      * Stratégie 1 : Trouve des transactions récurrentes basées sur une correspondance exacte du label.
+     * Utilise un scoring bayésien pour calculer la probabilité P(recurring | label).
      *
      * @param Transaction $transaction
      * @return RecurringTransactionRecommendation[]
@@ -93,6 +100,23 @@ class RecurringTransactionRecommendationService
     {
         $label = $transaction->getLabel();
         if (!$label) {
+            return [];
+        }
+
+        // Compter le nombre total de transactions avec ce label
+        $qbTotal = $this->entityManager->createQueryBuilder();
+        $qbTotal->select('COUNT(t.id)')
+            ->from(Transaction::class, 't')
+            ->where('t.user = :user')
+            ->andWhere('t.label = :label')
+            ->andWhere('t.id != :currentId')
+            ->setParameter('user', $transaction->getUser())
+            ->setParameter('label', $label)
+            ->setParameter('currentId', $transaction->getId());
+
+        $totalWithLabel = (int)$qbTotal->getQuery()->getSingleScalarResult();
+
+        if ($totalWithLabel === 0) {
             return [];
         }
 
@@ -109,7 +133,7 @@ class RecurringTransactionRecommendationService
             ->setParameter('currentId', $transaction->getId())
             ->groupBy('rt_id')
             ->orderBy('match_count', 'DESC')
-            ->setMaxResults(3);
+            ->setMaxResults(5);
 
         $results = $qb->getQuery()->getResult();
 
@@ -118,13 +142,17 @@ class RecurringTransactionRecommendationService
             $rtId = $data['rt_id'];
             $count = $data['match_count'];
 
+            // Calculer P(recurring | label)
+            $probability = ($count / $totalWithLabel) * 100;
+            $confidence = $this->calculateBayesianConfidence($probability);
+
             // Hydrater l'entité RecurringTransaction
             $recurringTransaction = $this->entityManager->find(RecurringTransaction::class, $rtId);
             if ($recurringTransaction) {
                 $recommendations[] = new RecurringTransactionRecommendation(
                     $recurringTransaction,
-                    self::CONFIDENCE_EXACT_MATCH,
-                    sprintf('Label identique (%d occurrences)', $count)
+                    $confidence,
+                    sprintf('Label identique (%d/%d = %.0f%%)', $count, $totalWithLabel, $probability)
                 );
             }
         }
@@ -133,7 +161,140 @@ class RecurringTransactionRecommendationService
     }
 
     /**
-     * Stratégie 2 : Trouve des transactions récurrentes basées sur des mots-clés du label.
+     * Calcule la confiance basée sur la probabilité bayésienne P(recurring | label).
+     */
+    private function calculateBayesianConfidence(float $probability): float
+    {
+        if ($probability >= 90.0) {
+            return 95.0;
+        }
+
+        if ($probability >= 75.0) {
+            return 90.0;
+        }
+
+        if ($probability >= 50.0) {
+            return 85.0;
+        }
+
+        if ($probability >= 25.0) {
+            return 80.0;
+        }
+
+        return 75.0;
+    }
+
+    /**
+     * Stratégie 2 : Trouve des transactions récurrentes basées sur des labels similaires (fuzzy matching).
+     *
+     * @param Transaction $transaction
+     * @return RecurringTransactionRecommendation[]
+     * @throws ORMException
+     * @throws OptimisticLockException
+     */
+    private function findBySimilarLabels(Transaction $transaction): array
+    {
+        $label = $transaction->getLabel();
+        if (!$label) {
+            return [];
+        }
+
+        // Normaliser le label pour comparaison
+        $normalizedLabel = mb_strtoupper($this->normalizeLabel($label));
+
+        // Récupérer toutes les transactions avec récurrence de l'utilisateur
+        $qb = $this->entityManager->createQueryBuilder();
+        $qb->select('t')
+            ->from(Transaction::class, 't')
+            ->where('t.user = :user')
+            ->andWhere('t.recurringTransaction IS NOT NULL')
+            ->andWhere('t.id != :currentId')
+            ->setParameter('user', $transaction->getUser())
+            ->setParameter('currentId', $transaction->getId())
+            ->setMaxResults(200);
+
+        $results = $qb->getQuery()->getResult();
+
+        $recurringScores = [];
+
+        foreach ($results as $similarTransaction) {
+            $similarLabel = $similarTransaction->getLabel();
+            if (!$similarLabel) {
+                continue;
+            }
+
+            $normalizedSimilarLabel = mb_strtoupper($this->normalizeLabel($similarLabel));
+
+            // Calculer la similarité
+            $similarity = $this->calculateSimilarity($normalizedLabel, $normalizedSimilarLabel);
+
+            // Ne garder que les labels avec une similarité élevée (mais pas 100% = exact match déjà traité)
+            if ($similarity >= self::SIMILARITY_THRESHOLD_LOW && $similarity < 100.0) {
+                $recurringTransaction = $similarTransaction->getRecurringTransaction();
+                if ($recurringTransaction && $recurringTransaction->getId()) {
+                    $rtId = $recurringTransaction->getId()->toString();
+
+                    // Garder le meilleur score de similarité pour chaque transaction récurrente
+                    if (!isset($recurringScores[$rtId]) || $recurringScores[$rtId]['similarity'] < $similarity) {
+                        $recurringScores[$rtId] = [
+                            'recurringTransaction' => $recurringTransaction,
+                            'similarity' => $similarity,
+                        ];
+                    }
+                }
+            }
+        }
+
+        $recommendations = [];
+        foreach ($recurringScores as $data) {
+            $similarity = $data['similarity'];
+            $confidence = $this->calculateFuzzyMatchConfidence($similarity);
+
+            $recommendations[] = new RecurringTransactionRecommendation(
+                $data['recurringTransaction'],
+                $confidence,
+                sprintf('Label similaire (%.0f%% de correspondance)', $similarity)
+            );
+        }
+
+        return $recommendations;
+    }
+
+    /**
+     * Calcule la similarité entre deux chaînes en pourcentage (0-100).
+     * Utilise la distance de Levenshtein normalisée.
+     */
+    private function calculateSimilarity(string $str1, string $str2): float
+    {
+        $maxLength = max(mb_strlen($str1), mb_strlen($str2));
+        if ($maxLength === 0) {
+            return 100.0;
+        }
+
+        $distance = levenshtein($str1, $str2);
+        $similarity = (1 - ($distance / $maxLength)) * 100;
+
+        return max(0.0, $similarity);
+    }
+
+    /**
+     * Calcule le niveau de confiance basé sur le pourcentage de similarité.
+     */
+    private function calculateFuzzyMatchConfidence(float $similarity): float
+    {
+        if ($similarity >= self::SIMILARITY_THRESHOLD_HIGH) {
+            return self::CONFIDENCE_FUZZY_MATCH_HIGH;
+        }
+
+        if ($similarity >= self::SIMILARITY_THRESHOLD_MEDIUM) {
+            return self::CONFIDENCE_FUZZY_MATCH_MEDIUM;
+        }
+
+        return self::CONFIDENCE_FUZZY_MATCH_LOW;
+    }
+
+    /**
+     * Stratégie 3 : Trouve des transactions récurrentes basées sur des mots-clés du label.
      *
      * @param Transaction $transaction
      * @return RecurringTransactionRecommendation[]
@@ -210,14 +371,17 @@ class RecurringTransactionRecommendationService
     }
 
     /**
-     * Extrait les mots-clés pertinents d'un label.
+     * Extrait les mots-clés pertinents d'un label avec normalisation avancée.
      *
      * @return string[]
      */
     private function extractKeywords(string $label): array
     {
-        // Nettoyer le label
+        // Nettoyer et normaliser le label
         $label = mb_strtoupper($label);
+
+        // Normaliser les variations communes
+        $label = $this->normalizeLabel($label);
 
         // Séparer par espaces et caractères spéciaux
         $words = preg_split('/[\s\-_\/]+/', $label);
@@ -225,19 +389,78 @@ class RecurringTransactionRecommendationService
             return [];
         }
 
-        // Filtrer les mots courts et les mots communs
-        $stopWords = ['CARTE', 'VIR', 'PRLV', 'DE', 'DU', 'LA', 'LE', 'LES', 'UN', 'UNE', 'INST', 'VERS', 'ECH', 'PRET'];
+        // Stop words étendus : mots bancaires, articles, prépositions, dates
+        $stopWords = [
+            // Termes bancaires
+            'CARTE', 'VIR', 'VIRT', 'PRLV', 'INST', 'VERS', 'ANN', 'ECH', 'PRET',
+            // Articles et prépositions
+            'DE', 'DU', 'LA', 'LE', 'LES', 'UN', 'UNE', 'DES', 'AU', 'AUX', 'ET', 'EN', 'POUR', 'PAR', 'SUR',
+            // Termes génériques
+            'PAYM', 'PAYMENT', 'PAYMENTS', 'SA', 'SAS', 'SARL', 'EURL', 'PAI',
+        ];
+
         $keywords = [];
 
         foreach ($words as $word) {
             $word = trim($word);
+
+            // Ignorer si vide après trim
+            if ($word === '') {
+                continue;
+            }
+
+            // Ignorer les dates (format jj/mm ou jj/mm/aa)
+            if (preg_match('/^\d{1,2}\/\d{1,2}(\/\d{2,4})?$/', $word)) {
+                continue;
+            }
+
+            // Ignorer les numéros purs ou codes courts
+            if (preg_match('/^\d+$/', $word) || preg_match('/^[A-Z0-9]{1,2}$/', $word)) {
+                continue;
+            }
+
+            // Ignorer les codes de transaction (ex: LR9HUD, NQDK92)
+            if (preg_match('/^[A-Z0-9]{6,10}$/', $word) && preg_match('/\d/', $word)) {
+                continue;
+            }
+
             // Garder les mots de 3+ caractères qui ne sont pas des stop words
-            if (mb_strlen($word) >= 3 && !in_array($word, $stopWords, true) && !preg_match('/^\d+$/', $word)) {
+            if (mb_strlen($word) >= 3 && !in_array($word, $stopWords, true)) {
                 $keywords[] = $word;
             }
         }
 
         return array_unique($keywords);
+    }
+
+    /**
+     * Normalise un label en standardisant les variations communes.
+     */
+    private function normalizeLabel(string $label): string
+    {
+        // Normaliser les points et espaces dans les abréviations
+        // "S.a.r.l." -> "SARL", "S.a r.l" -> "SARL"
+        $normalized = preg_replace('/S\.?\s*A\.?\s*R\.?\s*L\.?/i', 'SARL', $label);
+        $normalized = $normalized !== null ? $normalized : $label;
+
+        $normalized = preg_replace('/S\.?\s*A\.?\s*S\.?/i', 'SAS', $normalized);
+        $normalized = $normalized !== null ? $normalized : $label;
+
+        $normalized = preg_replace('/E\.?\s*U\.?\s*R\.?\s*L\.?/i', 'EURL', $normalized);
+        $normalized = $normalized !== null ? $normalized : $label;
+
+        // Normaliser "et Cie" variations
+        $normalized = preg_replace('/\s+ET\s+C(IE)?\.?\s*$/i', '', $normalized);
+        $normalized = $normalized !== null ? $normalized : $label;
+
+        // Normaliser les parenthèses et crochets
+        $normalized = str_replace(['(', ')', '[', ']'], ' ', $normalized);
+
+        // Normaliser les espaces multiples
+        $normalized = preg_replace('/\s+/', ' ', $normalized);
+        $normalized = $normalized !== null ? $normalized : $label;
+
+        return trim($normalized);
     }
 
     /**
@@ -264,59 +487,6 @@ class RecurringTransactionRecommendationService
 
         // Sinon → confiance faible
         return self::CONFIDENCE_KEYWORD_WEAK;
-    }
-
-    /**
-     * Stratégie 3 : Trouve des transactions récurrentes basées sur des montants similaires.
-     *
-     * @param Transaction $transaction
-     * @return RecurringTransactionRecommendation[]
-     * @throws ORMException
-     * @throws OptimisticLockException
-     */
-    private function findByAmountPattern(Transaction $transaction): array
-    {
-        $amount = $transaction->getAmountAsFloat();
-        $tolerance = abs($amount) * 0.1; // Tolérance de 10%
-
-        $minAmount = $amount - $tolerance;
-        $maxAmount = $amount + $tolerance;
-
-        $qb = $this->entityManager->createQueryBuilder();
-        $qb->select('IDENTITY(t.recurringTransaction) as rt_id', 'COUNT(t.id) as match_count')
-            ->from(Transaction::class, 't')
-            ->where('t.user = :user')
-            ->andWhere('t.amount >= :minAmount')
-            ->andWhere('t.amount <= :maxAmount')
-            ->andWhere('t.recurringTransaction IS NOT NULL')
-            ->andWhere('t.id != :currentId')
-            ->setParameter('user', $transaction->getUser())
-            ->setParameter('minAmount', (string)$minAmount)
-            ->setParameter('maxAmount', (string)$maxAmount)
-            ->setParameter('currentId', $transaction->getId())
-            ->groupBy('rt_id')
-            ->orderBy('match_count', 'DESC')
-            ->setMaxResults(5);
-
-        $results = $qb->getQuery()->getResult();
-
-        $recommendations = [];
-        foreach ($results as $data) {
-            $rtId = $data['rt_id'];
-            $count = $data['match_count'];
-
-            // Hydrater l'entité RecurringTransaction
-            $recurringTransaction = $this->entityManager->find(RecurringTransaction::class, $rtId);
-            if ($recurringTransaction) {
-                $recommendations[] = new RecurringTransactionRecommendation(
-                    $recurringTransaction,
-                    self::CONFIDENCE_AMOUNT_PATTERN,
-                    sprintf('Montant similaire (%.2f€, %d occurrences)', $amount, $count)
-                );
-            }
-        }
-
-        return $recommendations;
     }
 
     /**
@@ -369,14 +539,19 @@ class RecurringTransactionRecommendationService
 
     /**
      * Fusionne et déduplique les recommandations.
+     * Si plusieurs recommandations pointent vers la même transaction récurrente :
+     * - Garde la meilleure confiance
+     * - Ajoute un bonus si multiple sources (cohérence)
+     * - Combine les raisons
      *
      * @param RecurringTransactionRecommendation[] $recommendations
      * @return RecurringTransactionRecommendation[]
      */
     private function mergeAndDeduplicateRecommendations(array $recommendations): array
     {
-        $merged = [];
+        $grouped = [];
 
+        // Grouper les recommandations par transaction récurrente
         foreach ($recommendations as $recommendation) {
             $id = $recommendation->getRecurringTransaction()->getId();
             if ($id === null) {
@@ -384,9 +559,54 @@ class RecurringTransactionRecommendationService
             }
             $rtId = $id->toString();
 
-            if (!isset($merged[$rtId]) || $merged[$rtId]->getConfidence() < $recommendation->getConfidence()) {
-                $merged[$rtId] = $recommendation;
+            if (!isset($grouped[$rtId])) {
+                $grouped[$rtId] = [
+                    'recurringTransaction' => $recommendation->getRecurringTransaction(),
+                    'recommendations' => [],
+                ];
             }
+
+            $grouped[$rtId]['recommendations'][] = $recommendation;
+        }
+
+        // Fusionner intelligemment
+        $merged = [];
+        foreach ($grouped as $rtId => $data) {
+            $recs = $data['recommendations'];
+            $recurringTransaction = $data['recurringTransaction'];
+
+            // Trouver la meilleure confiance
+            $maxConfidence = 0.0;
+            $reasons = [];
+            foreach ($recs as $rec) {
+                if ($rec->getConfidence() > $maxConfidence) {
+                    $maxConfidence = $rec->getConfidence();
+                }
+                $reasons[] = $rec->getReason();
+            }
+
+            // Bonus de confiance si multiple sources (max +3%)
+            $sourceBonus = 0.0;
+            if (count($recs) >= 3) {
+                $sourceBonus = 3.0;
+            } elseif (count($recs) === 2) {
+                $sourceBonus = 2.0;
+            }
+
+            $finalConfidence = min(100.0, $maxConfidence + $sourceBonus);
+
+            // Combiner les raisons (garder les 2 meilleures)
+            $uniqueReasons = array_unique($reasons);
+            $combinedReason = implode(' + ', array_slice($uniqueReasons, 0, 2));
+            if (count($uniqueReasons) > 2) {
+                $combinedReason .= sprintf(' (+%d autres)', count($uniqueReasons) - 2);
+            }
+
+            $merged[$rtId] = new RecurringTransactionRecommendation(
+                $recurringTransaction,
+                $finalConfidence,
+                $combinedReason
+            );
         }
 
         return array_values($merged);
