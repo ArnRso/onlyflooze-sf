@@ -171,7 +171,7 @@ class TagRecommendationService
                 if ($similarTransaction instanceof Transaction) {
                     foreach ($similarTransaction->getTags() as $tag) {
                         // Calculer la confiance basée sur la similarité
-                        $confidence = $this->calculateKeywordConfidence($label, $keyword, $tag);
+                        $confidence = $this->calculateKeywordConfidence($keyword, $tag);
 
                         $recommendations[] = new TagRecommendation(
                             $tag,
@@ -217,9 +217,8 @@ class TagRecommendationService
     /**
      * Calcule la confiance pour une correspondance par mot-clé.
      */
-    private function calculateKeywordConfidence(string $label, string $keyword, Tag $tag): float
+    private function calculateKeywordConfidence(string $keyword, Tag $tag): float
     {
-        $labelUpper = mb_strtoupper($label);
         $keywordUpper = mb_strtoupper($keyword);
         $tagNameUpper = mb_strtoupper($tag->getName());
 

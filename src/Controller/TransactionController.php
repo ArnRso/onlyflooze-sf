@@ -10,6 +10,7 @@ use App\Form\TransactionType;
 use App\Repository\RecurringTransactionRepository;
 use App\Repository\TagRepository;
 use App\Security\Voter\TransactionVoter;
+use App\Service\RecurringTransactionRecommendationService;
 use App\Service\RecurringTransactionService;
 use App\Service\TagRecommendationService;
 use App\Service\TagService;
@@ -29,13 +30,14 @@ use Symfony\Component\Security\Http\Attribute\IsGranted;
 class TransactionController extends AbstractController
 {
     public function __construct(
-        private readonly TransactionService             $transactionService,
-        private readonly RecurringTransactionService    $recurringTransactionService,
-        private readonly PaginatorInterface             $paginator,
-        private readonly RecurringTransactionRepository $recurringTransactionRepository,
-        private readonly TagRepository                  $tagRepository,
-        private readonly TagService                     $tagService,
-        private readonly TagRecommendationService       $tagRecommendationService
+        private readonly TransactionService                        $transactionService,
+        private readonly RecurringTransactionService               $recurringTransactionService,
+        private readonly PaginatorInterface                        $paginator,
+        private readonly RecurringTransactionRepository            $recurringTransactionRepository,
+        private readonly TagRepository                             $tagRepository,
+        private readonly TagService                                $tagService,
+        private readonly TagRecommendationService                  $tagRecommendationService,
+        private readonly RecurringTransactionRecommendationService $recurringTransactionRecommendationService
     )
     {
     }
@@ -143,8 +145,9 @@ class TransactionController extends AbstractController
         $user = $this->getUser();
         $tags = $this->tagRepository->findBy(['user' => $user], ['name' => 'ASC']);
 
-        // Obtenir les recommandations de tags
-        $recommendations = $this->tagRecommendationService->getRecommendations($transaction, 5);
+        // Obtenir les recommandations de tags et de transactions récurrentes
+        $tagRecommendations = $this->tagRecommendationService->getRecommendations($transaction);
+        $recurringTransactionRecommendations = $this->recurringTransactionRecommendationService->getRecommendations($transaction);
 
         $form = $this->createForm(TransactionType::class, $transaction);
         $form->handleRequest($request);
@@ -174,7 +177,8 @@ class TransactionController extends AbstractController
             'transaction' => $transaction,
             'form' => $form,
             'tags' => $tags,
-            'recommendations' => $recommendations,
+            'tagRecommendations' => $tagRecommendations,
+            'recurringTransactionRecommendations' => $recurringTransactionRecommendations,
         ]);
     }
 

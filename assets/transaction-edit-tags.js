@@ -45,7 +45,6 @@ document.addEventListener('DOMContentLoaded', function () {
     document.querySelectorAll('.recommended-tag').forEach(button => {
         button.addEventListener('click', function () {
             const tagId = this.dataset.tagId;
-            const tagName = this.dataset.tagName;
 
             // Trouver le tag dans les données existantes
             const existingTag = tagManager.existingTagsData.find(tag => tag.id === tagId);
@@ -72,6 +71,39 @@ document.addEventListener('DOMContentLoaded', function () {
 
                     // Désactiver le bouton de recommandation
                     this.classList.remove('btn-outline-primary');
+                    this.classList.add('btn-success');
+                    this.querySelector('.fa-plus-circle').classList.remove('fa-plus-circle');
+                    this.querySelector('.fas').classList.add('fa-check-circle');
+                    this.disabled = true;
+                }
+            }
+        });
+    });
+
+    // Gérer les clics sur les transactions récurrentes recommandées
+    document.querySelectorAll('.recommended-recurring').forEach(button => {
+        button.addEventListener('click', function () {
+            const recurringId = this.dataset.recurringId;
+
+            // Trouver le select de transaction récurrente
+            const recurringSelect = document.querySelector('select[name="transaction[recurringTransaction]"]');
+
+            if (recurringSelect) {
+                // Sélectionner l'option correspondante
+                const option = recurringSelect.querySelector(`option[value="${recurringId}"]`);
+
+                if (option) {
+                    recurringSelect.value = recurringId;
+
+                    // Animation visuelle sur le select
+                    recurringSelect.style.transform = 'scale(1.02)';
+                    recurringSelect.style.transition = 'transform 0.2s';
+                    setTimeout(() => {
+                        recurringSelect.style.transform = 'scale(1)';
+                    }, 200);
+
+                    // Désactiver le bouton de recommandation
+                    this.classList.remove('btn-outline-warning');
                     this.classList.add('btn-success');
                     this.querySelector('.fa-plus-circle').classList.remove('fa-plus-circle');
                     this.querySelector('.fas').classList.add('fa-check-circle');
