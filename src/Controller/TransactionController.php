@@ -11,6 +11,7 @@ use App\Repository\RecurringTransactionRepository;
 use App\Repository\TagRepository;
 use App\Security\Voter\TransactionVoter;
 use App\Service\RecurringTransactionService;
+use App\Service\TagRecommendationService;
 use App\Service\TagService;
 use App\Service\TransactionService;
 use DateMalformedStringException;
@@ -33,7 +34,8 @@ class TransactionController extends AbstractController
         private readonly PaginatorInterface             $paginator,
         private readonly RecurringTransactionRepository $recurringTransactionRepository,
         private readonly TagRepository                  $tagRepository,
-        private readonly TagService                     $tagService
+        private readonly TagService                     $tagService,
+        private readonly TagRecommendationService       $tagRecommendationService
     )
     {
     }
@@ -141,6 +143,9 @@ class TransactionController extends AbstractController
         $user = $this->getUser();
         $tags = $this->tagRepository->findBy(['user' => $user], ['name' => 'ASC']);
 
+        // Obtenir les recommandations de tags
+        $recommendations = $this->tagRecommendationService->getRecommendations($transaction, 5);
+
         $form = $this->createForm(TransactionType::class, $transaction);
         $form->handleRequest($request);
 
@@ -169,6 +174,7 @@ class TransactionController extends AbstractController
             'transaction' => $transaction,
             'form' => $form,
             'tags' => $tags,
+            'recommendations' => $recommendations,
         ]);
     }
 

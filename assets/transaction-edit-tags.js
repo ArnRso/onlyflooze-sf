@@ -40,4 +40,44 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // Initialisation : synchroniser l'état initial
     tagManager.syncWithSymfonyForm();
+
+    // Gérer les clics sur les tags recommandés
+    document.querySelectorAll('.recommended-tag').forEach(button => {
+        button.addEventListener('click', function () {
+            const tagId = this.dataset.tagId;
+            const tagName = this.dataset.tagName;
+
+            // Trouver le tag dans les données existantes
+            const existingTag = tagManager.existingTagsData.find(tag => tag.id === tagId);
+
+            if (existingTag) {
+                // Sélectionner le tag existant
+                const checkbox = document.getElementById('tag_' + tagId);
+                const checkIcon = existingTag.element.querySelector('.tag-check');
+
+                if (!checkbox.checked) {
+                    checkbox.checked = true;
+                    checkIcon.style.display = 'block';
+                    existingTag.element.style.opacity = '0.7';
+
+                    // Synchroniser avec le formulaire Symfony
+                    tagManager.syncWithSymfonyForm();
+
+                    // Animation visuelle
+                    existingTag.element.style.transform = 'scale(1.1)';
+                    existingTag.element.scrollIntoView({behavior: 'smooth', block: 'nearest'});
+                    setTimeout(() => {
+                        existingTag.element.style.transform = 'scale(1)';
+                    }, 200);
+
+                    // Désactiver le bouton de recommandation
+                    this.classList.remove('btn-outline-primary');
+                    this.classList.add('btn-success');
+                    this.querySelector('.fa-plus-circle').classList.remove('fa-plus-circle');
+                    this.querySelector('.fas').classList.add('fa-check-circle');
+                    this.disabled = true;
+                }
+            }
+        });
+    });
 });
