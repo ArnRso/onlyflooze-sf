@@ -76,11 +76,11 @@ class CsvImportSessionRepository extends ServiceEntityRepository
             ->getSingleResult();
 
         return [
-            'total_imports' => (int)($result['total_imports'] ?? 0),
-            'total_rows_processed' => (int)($result['total_rows_processed'] ?? 0),
-            'total_successful' => (int)($result['total_successful'] ?? 0),
-            'total_duplicates' => (int)($result['total_duplicates'] ?? 0),
-            'total_errors' => (int)($result['total_errors'] ?? 0),
+            'total_imports' => (int) ($result['total_imports'] ?? 0),
+            'total_rows_processed' => (int) ($result['total_rows_processed'] ?? 0),
+            'total_successful' => (int) ($result['total_successful'] ?? 0),
+            'total_duplicates' => (int) ($result['total_duplicates'] ?? 0),
+            'total_errors' => (int) ($result['total_errors'] ?? 0),
         ];
     }
 

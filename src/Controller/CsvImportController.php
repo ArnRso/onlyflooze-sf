@@ -13,9 +13,6 @@ use App\Security\Voter\CsvImportProfileVoter;
 use App\Service\CsvParserService;
 use App\Service\CsvProfileService;
 use App\Service\TransactionImportService;
-use Exception;
-use JsonException;
-use RuntimeException;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\File\UploadedFile;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -29,12 +26,11 @@ use Symfony\Component\Security\Http\Attribute\IsGranted;
 class CsvImportController extends AbstractController
 {
     public function __construct(
-        private readonly CsvProfileService          $csvProfileService,
-        private readonly TransactionImportService   $transactionImportService,
+        private readonly CsvProfileService $csvProfileService,
+        private readonly TransactionImportService $transactionImportService,
         private readonly CsvImportSessionRepository $csvImportSessionRepository,
-        private readonly CsvParserService           $csvParserService
-    )
-    {
+        private readonly CsvParserService $csvParserService,
+    ) {
     }
 
     #[Route('/', name: 'app_csv_import_index', methods: ['GET'])]
@@ -62,15 +58,15 @@ class CsvImportController extends AbstractController
         if ($form->isSubmitted() && $form->isValid()) {
             $data = $form->getData();
             if (!is_array($data) || !isset($data['file'])) {
-                throw new RuntimeException('Invalid form data');
+                throw new \RuntimeException('Invalid form data');
             }
             /** @var UploadedFile $file */
             $file = $data['file'];
 
             // Move uploaded file to temp directory
-            $uploadsDirectory = $this->getParameter('kernel.project_dir') . '/var/uploads';
+            $uploadsDirectory = $this->getParameter('kernel.project_dir').'/var/uploads';
             if (!is_dir($uploadsDirectory) && !mkdir($uploadsDirectory, 0755, true) && !is_dir($uploadsDirectory)) {
-                throw new RuntimeException('Unable to create upload directory');
+                throw new \RuntimeException('Unable to create upload directory');
             }
 
             // Preserve original extension or use csv as fallback
@@ -79,9 +75,9 @@ class CsvImportController extends AbstractController
                 $originalExtension = $file->guessExtension() ?: 'csv';
             }
 
-            $filename = uniqid('', true) . '.' . $originalExtension;
+            $filename = uniqid('', true).'.'.$originalExtension;
             $file->move($uploadsDirectory, $filename);
-            $filePath = $uploadsDirectory . '/' . $filename;
+            $filePath = $uploadsDirectory.'/'.$filename;
 
             // Store file path in session for configuration
             $request->getSession()->set('csv_wizard_file', $filePath);
@@ -103,6 +99,7 @@ class CsvImportController extends AbstractController
 
         if (!$filePath || !file_exists($filePath)) {
             $this->addFlash('error', 'Aucun fichier en cours d\'analyse. Recommencez l\'upload.');
+
             return $this->redirectToRoute('app_csv_import_wizard');
         }
 
@@ -114,12 +111,14 @@ class CsvImportController extends AbstractController
             $profileId = $request->getSession()->get('csv_wizard_profile');
             if (!$profileId) {
                 $this->addFlash('error', 'Aucun profil sélectionné.');
+
                 return $this->redirectToRoute('app_csv_import_configure', ['step' => 'analyze']);
             }
 
-            $profile = $this->csvProfileService->getUserProfileById($user, (string)$profileId);
+            $profile = $this->csvProfileService->getUserProfileById($user, (string) $profileId);
             if (!$profile) {
                 $this->addFlash('error', 'Profil introuvable.');
+
                 return $this->redirectToRoute('app_csv_import_configure', ['step' => 'analyze']);
             }
 
@@ -150,8 +149,8 @@ class CsvImportController extends AbstractController
                         ));
 
                         return $this->redirectToRoute('app_csv_import_session_show', ['id' => $session->getId()]);
-                    } catch (Exception $e) {
-                        $this->addFlash('error', 'Erreur lors de l\'import : ' . $e->getMessage());
+                    } catch (\Exception $e) {
+                        $this->addFlash('error', 'Erreur lors de l\'import : '.$e->getMessage());
                     }
                 } elseif ($action === 'back') {
                     return $this->redirectToRoute('app_csv_import_configure', ['step' => 'analyze']);
@@ -180,6 +179,7 @@ class CsvImportController extends AbstractController
 
                 if ($profile) {
                     $request->getSession()->set('csv_wizard_profile', $profileId);
+
                     return $this->redirectToRoute('app_csv_import_configure', ['step' => 'preview']);
                 }
             } else {
@@ -204,15 +204,15 @@ class CsvImportController extends AbstractController
 
                 // Configuration du mapping
                 $columnMapping = [
-                    'date' => (int)$postData['date_column'],
-                    'label' => (int)$postData['label_column'],
+                    'date' => (int) $postData['date_column'],
+                    'label' => (int) $postData['label_column'],
                 ];
 
                 if ($postData['amount_type'] === 'single') {
-                    $columnMapping['amount'] = (int)$postData['amount_column'];
+                    $columnMapping['amount'] = (int) $postData['amount_column'];
                 } else {
-                    $columnMapping['credit'] = (int)$postData['credit_column'];
-                    $columnMapping['debit'] = (int)$postData['debit_column'];
+                    $columnMapping['credit'] = (int) $postData['credit_column'];
+                    $columnMapping['debit'] = (int) $postData['debit_column'];
                 }
 
                 $profile->setColumnMapping($columnMapping);
@@ -221,6 +221,7 @@ class CsvImportController extends AbstractController
                 $this->csvProfileService->createProfile($profile, $user);
 
                 $request->getSession()->set('csv_wizard_profile', $profile->getId()?->toString());
+
                 return $this->redirectToRoute('app_csv_import_configure', ['step' => 'preview']);
             }
         }
@@ -251,16 +252,16 @@ class CsvImportController extends AbstractController
                         'delimiter_name' => $delimiter === ',' ? 'Virgule' : ($delimiter === ';' ? 'Point-virgule' : 'Tabulation'),
                         'encoding' => $encoding,
                         'analysis' => $analysis,
-                        'score' => $this->calculateAnalysisScore($analysis)
+                        'score' => $this->calculateAnalysisScore($analysis),
                     ];
-                } catch (Exception) {
+                } catch (\Exception) {
                     // Ignorer les erreurs d'analyse
                 }
             }
         }
 
         // Trier par score décroissant
-        usort($analyses, static fn($a, $b) => $b['score'] <=> $a['score']);
+        usort($analyses, static fn ($a, $b) => $b['score'] <=> $a['score']);
 
         return $analyses;
     }
@@ -273,7 +274,7 @@ class CsvImportController extends AbstractController
         $score = 0;
 
         // Plus de lignes = mieux
-        $score += (int)min($analysis['total_rows'] * 10, 100);
+        $score += (int) min($analysis['total_rows'] * 10, 100);
 
         // Colonnes cohérentes = mieux
         if ($analysis['consistent_columns']) {
@@ -289,7 +290,7 @@ class CsvImportController extends AbstractController
     }
 
     /**
-     * @throws JsonException
+     * @throws \JsonException
      */
     #[Route('/api/preview-with-settings', name: 'app_csv_import_api_preview', methods: ['POST'])]
     public function apiPreviewWithSettings(Request $request): JsonResponse
@@ -313,8 +314,9 @@ class CsvImportController extends AbstractController
 
         try {
             $preview = $this->transactionImportService->previewCsvData($filePath, $tempProfile);
+
             return new JsonResponse($preview);
-        } catch (Exception $e) {
+        } catch (\Exception $e) {
             return new JsonResponse(['error' => $e->getMessage()], 400);
         }
     }
@@ -391,7 +393,7 @@ class CsvImportController extends AbstractController
     {
         $this->denyAccessUnlessGranted(CsvImportProfileVoter::DELETE, $profile);
 
-        if ($this->isCsrfTokenValid('delete' . $profile->getId(), $request->getPayload()->getString('_token'))) {
+        if ($this->isCsrfTokenValid('delete'.$profile->getId(), $request->getPayload()->getString('_token'))) {
             $this->csvProfileService->deleteProfile($profile);
             $this->addFlash('success', 'Profil CSV supprimé avec succès.');
         }
@@ -408,6 +410,7 @@ class CsvImportController extends AbstractController
 
         if (empty($profiles)) {
             $this->addFlash('warning', 'Vous devez d\'abord créer au moins un profil CSV.');
+
             return $this->redirectToRoute('app_csv_import_profile_new');
         }
 
@@ -418,14 +421,14 @@ class CsvImportController extends AbstractController
         }
 
         $form = $this->createForm(CsvUploadType::class, $defaultData, [
-            'profiles' => $profiles
+            'profiles' => $profiles,
         ]);
         $form->handleRequest($request);
 
         if ($form->isSubmitted() && $form->isValid()) {
             $data = $form->getData();
             if (!isset($data['file'], $data['profile'])) {
-                throw new RuntimeException('Invalid form data');
+                throw new \RuntimeException('Invalid form data');
             }
             /** @var UploadedFile $file */
             $file = $data['file'];
@@ -433,9 +436,9 @@ class CsvImportController extends AbstractController
             $profile = $data['profile'];
 
             // Move uploaded file to temp directory
-            $uploadsDirectory = $this->getParameter('kernel.project_dir') . '/var/uploads';
+            $uploadsDirectory = $this->getParameter('kernel.project_dir').'/var/uploads';
             if (!is_dir($uploadsDirectory) && !mkdir($uploadsDirectory, 0755, true) && !is_dir($uploadsDirectory)) {
-                throw new RuntimeException('Unable to create upload directory');
+                throw new \RuntimeException('Unable to create upload directory');
             }
 
             // Preserve original extension or use csv as fallback
@@ -444,9 +447,9 @@ class CsvImportController extends AbstractController
                 $originalExtension = $file->guessExtension() ?: 'csv';
             }
 
-            $filename = uniqid('', true) . '.' . $originalExtension;
+            $filename = uniqid('', true).'.'.$originalExtension;
             $file->move($uploadsDirectory, $filename);
-            $filePath = $uploadsDirectory . '/' . $filename;
+            $filePath = $uploadsDirectory.'/'.$filename;
 
             // Validate file
             $validation = $this->transactionImportService->validateCsvFile($filePath);
@@ -455,6 +458,7 @@ class CsvImportController extends AbstractController
                 foreach ($validation['errors'] as $error) {
                     $this->addFlash('error', $error);
                 }
+
                 return $this->render('csv_import/upload.html.twig', [
                     'form' => $form,
                     'profiles' => $profiles,
@@ -482,15 +486,17 @@ class CsvImportController extends AbstractController
 
         if (!$filePath || !$profileId) {
             $this->addFlash('error', 'Aucun fichier en cours d\'import.');
+
             return $this->redirectToRoute('app_csv_import_upload');
         }
 
         /** @var User $user */
         $user = $this->getUser();
-        $profile = $this->csvProfileService->getUserProfileById($user, (string)$profileId);
+        $profile = $this->csvProfileService->getUserProfileById($user, (string) $profileId);
 
         if (!$profile) {
             $this->addFlash('error', 'Profil CSV introuvable.');
+
             return $this->redirectToRoute('app_csv_import_upload');
         }
 
@@ -515,8 +521,8 @@ class CsvImportController extends AbstractController
                     ));
 
                     return $this->redirectToRoute('app_csv_import_session_show', ['id' => $session->getId()]);
-                } catch (Exception $e) {
-                    $this->addFlash('error', 'Erreur lors de l\'import : ' . $e->getMessage());
+                } catch (\Exception $e) {
+                    $this->addFlash('error', 'Erreur lors de l\'import : '.$e->getMessage());
                 }
             } else {
                 // Cancel import
@@ -525,6 +531,7 @@ class CsvImportController extends AbstractController
                 $request->getSession()->remove('csv_upload_profile');
 
                 $this->addFlash('info', 'Import annulé.');
+
                 return $this->redirectToRoute('app_csv_import_upload');
             }
         }

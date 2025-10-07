@@ -4,7 +4,6 @@ namespace App\Repository;
 
 use App\Entity\Transaction;
 use App\Entity\User;
-use DateTimeImmutable;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
 
@@ -53,7 +52,7 @@ class TransactionRepository extends ServiceEntityRepository
     /**
      * @return Transaction[]
      */
-    public function findByUserAndDateRange(User $user, DateTimeImmutable $startDate, DateTimeImmutable $endDate): array
+    public function findByUserAndDateRange(User $user, \DateTimeImmutable $startDate, \DateTimeImmutable $endDate): array
     {
         return $this->createQueryBuilder('t')
             ->andWhere('t.user = :user')
@@ -77,7 +76,7 @@ class TransactionRepository extends ServiceEntityRepository
             ->getQuery()
             ->getSingleScalarResult();
 
-        return (float)($result ?? 0);
+        return (float) ($result ?? 0);
     }
 
     public function getCountByUser(User $user): int
@@ -89,6 +88,6 @@ class TransactionRepository extends ServiceEntityRepository
             ->getQuery()
             ->getSingleScalarResult();
 
-        return (int)$result;
+        return (int) $result;
     }
 }

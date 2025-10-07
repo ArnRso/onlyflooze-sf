@@ -33,36 +33,36 @@
                             </tr>
                             </thead>
                             <tbody>
-                            {% for recurringTransaction in recurring_transactions %}
+                            {% for recurring_transaction in recurring_transactions %}
                                 <tr>
                                     <td>
-                                        <strong>{{ recurringTransaction.name }}</strong>
+                                        <strong>{{ recurring_transaction.name }}</strong>
                                     </td>
                                     <td>
                                         <small
-                                            class="text-muted">{{ recurringTransaction.createdAt|date('d/m/Y H:i') }}</small>
+                                            class="text-muted">{{ recurring_transaction.createdAt|date('d/m/Y H:i') }}</small>
                                     </td>
                                     <td>
-                                        <span class="badge bg-info">{{ recurringTransaction.transactions|length }} transaction(s)</span>
+                                        <span class="badge bg-info">{{ recurring_transaction.transactions|length }} transaction(s)</span>
                                     </td>
                                     <td class="text-center">
                                         <div class="btn-group btn-group-sm">
-                                            <a href="{{ path('app_recurring_transaction_show', {'id': recurringTransaction.id}) }}"
+                                            <a href="{{ path('app_recurring_transaction_show', {'id': recurring_transaction.id}) }}"
                                                class="btn btn-outline-info">
                                                 <i class="fas fa-eye"></i>
                                             </a>
-                                            <a href="{{ path('app_recurring_transaction_edit', {'id': recurringTransaction.id}) }}"
+                                            <a href="{{ path('app_recurring_transaction_edit', {'id': recurring_transaction.id}) }}"
                                                class="btn btn-outline-warning">
                                                 <i class="fas fa-edit"></i>
                                             </a>
                                             <button type="button" class="btn btn-outline-danger" data-bs-toggle="modal"
-                                                    data-bs-target="#deleteModal{{ recurringTransaction.id }}">
+                                                    data-bs-target="#deleteModal{{ recurring_transaction.id }}">
                                                 <i class="fas fa-trash"></i>
                                             </button>
                                         </div>
 
                                         <!-- Modal de suppression -->
-                                        <div class="modal fade" id="deleteModal{{ recurringTransaction.id }}"
+                                        <div class="modal fade" id="deleteModal{{ recurring_transaction.id }}"
                                              tabindex="-1">
                                             <div class="modal-dialog">
                                                 <div class="modal-content">
@@ -74,12 +74,12 @@
                                                     <div class="modal-body">
                                                         <p>Êtes-vous sûr de vouloir supprimer cette transaction
                                                             récurrente ?</p>
-                                                        <p class="fw-bold">{{ recurringTransaction.name }}</p>
-                                                        {% if recurringTransaction.transactions|length > 0 %}
+                                                        <p class="fw-bold">{{ recurring_transaction.name }}</p>
+                                                        {% if recurring_transaction.transactions|length > 0 %}
                                                             <p class="text-warning">
                                                                 <i class="fas fa-exclamation-triangle"></i>
                                                                 Attention
-                                                                : {{ recurringTransaction.transactions|length }}
+                                                                : {{ recurring_transaction.transactions|length }}
                                                                 transaction(s) sont liées à cette transaction
                                                                 récurrente.
                                                             </p>
@@ -90,10 +90,10 @@
                                                                 data-bs-dismiss="modal">Annuler
                                                         </button>
                                                         <form method="post"
-                                                              action="{{ path('app_recurring_transaction_delete', {'id': recurringTransaction.id}) }}"
+                                                              action="{{ path('app_recurring_transaction_delete', {'id': recurring_transaction.id}) }}"
                                                               style="display: inline;">
                                                             <input type="hidden" name="_token"
-                                                                   value="{{ csrf_token('delete' ~ recurringTransaction.id) }}">
+                                                                   value="{{ csrf_token('delete' ~ recurring_transaction.id) }}">
                                                             <button type="submit" class="btn btn-danger">Supprimer
                                                             </button>
                                                         </form>

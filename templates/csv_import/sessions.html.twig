@@ -107,8 +107,8 @@
                                                 </div>
                                             </td>
                                             <td>
-                                                {% set statusClass = session.status == 'completed' ? 'success' : (session.status == 'failed' ? 'danger' : 'warning') %}
-                                                <span class="badge bg-{{ statusClass }}">
+                                                {% set status_class = session.status == 'completed' ? 'success' : (session.status == 'failed' ? 'danger' : 'warning') %}
+                                                <span class="badge bg-{{ status_class }}">
                                                     {% if session.status == 'completed' %}
                                                         Terminé
                                                     {% elseif session.status == 'failed' %}
@@ -184,8 +184,8 @@
                                             <small class="text-muted">Erreurs</small>
                                         </div>
                                         <div class="col-md-2">
-                                            {% set successRate = totals.rows > 0 ? (totals.successful / totals.rows * 100)|round(1) : 0 %}
-                                            <h4 class="text-secondary mb-0">{{ successRate }}%</h4>
+                                            {% set success_rate = totals.rows > 0 ? (totals.successful / totals.rows * 100)|round(1) : 0 %}
+                                            <h4 class="text-secondary mb-0">{{ success_rate }}%</h4>
                                             <small class="text-muted">Taux de succès</small>
                                         </div>
                                     </div>

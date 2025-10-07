@@ -75,7 +75,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // Before submitting, add selected transaction IDs to the form
     if (assignForm) {
-        assignForm.addEventListener('submit', function (e) {
+        assignForm.addEventListener('submit', function () {
             // Remove any existing transaction_ids inputs
             assignForm.querySelectorAll('input[name="transaction_ids[]"]').forEach(input => input.remove());
 
@@ -93,7 +93,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // Before submitting tag form, add selected transaction IDs
     if (assignTagForm) {
-        assignTagForm.addEventListener('submit', function (e) {
+        assignTagForm.addEventListener('submit', function () {
             // Remove any existing transaction_ids inputs
             assignTagForm.querySelectorAll('input[name="transaction_ids[]"]').forEach(input => input.remove());
 

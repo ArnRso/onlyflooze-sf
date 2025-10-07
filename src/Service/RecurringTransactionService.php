@@ -6,18 +6,15 @@ use App\Entity\RecurringTransaction;
 use App\Entity\Transaction;
 use App\Entity\User;
 use App\Repository\RecurringTransactionRepository;
-use DateMalformedStringException;
-use DateTime;
 use Doctrine\ORM\EntityManagerInterface;
 use Ramsey\Uuid\UuidInterface;
 
 readonly class RecurringTransactionService
 {
     public function __construct(
-        private EntityManagerInterface         $entityManager,
-        private RecurringTransactionRepository $recurringTransactionRepository
-    )
-    {
+        private EntityManagerInterface $entityManager,
+        private RecurringTransactionRepository $recurringTransactionRepository,
+    ) {
     }
 
     public function createRecurringTransaction(RecurringTransaction $recurringTransaction, User $user): RecurringTransaction
@@ -137,7 +134,8 @@ readonly class RecurringTransactionService
     }
 
     /**
-     * Récupère les transactions récurrentes de l'utilisateur avec le nombre de transactions
+     * Récupère les transactions récurrentes de l'utilisateur avec le nombre de transactions.
+     *
      * @return array<int, array{0: RecurringTransaction, transactionCount: int}>
      */
     public function getUserRecurringTransactionsWithCount(User $user): array
@@ -155,15 +153,17 @@ readonly class RecurringTransactionService
     }
 
     /**
-     * Récupère les données de récapitulatif mensuel pour les transactions récurrentes
+     * Récupère les données de récapitulatif mensuel pour les transactions récurrentes.
+     *
      * @return array{recurring_transactions: array<int, array<string, mixed>>, totals: array{expected: float, paid: float, remaining: float}, available_months: array<string>}
-     * @throws DateMalformedStringException
+     *
+     * @throws \DateMalformedStringException
      */
     public function getMonthlyRecapData(User $user, string $selectedMonth): array
     {
         // Récupérer toutes les transactions récurrentes de l'utilisateur
         $recurringTransactions = $this->getUserRecurringTransactions($user);
-        $recurringIds = array_map(static fn($rt) => $rt->getId()?->toString() ?? '', $recurringTransactions);
+        $recurringIds = array_map(static fn ($rt) => $rt->getId()?->toString() ?? '', $recurringTransactions);
         $recurringIds = array_filter($recurringIds);
 
         if (empty($recurringIds)) {
@@ -204,7 +204,7 @@ readonly class RecurringTransactionService
                 'already_out' => 0,      // Déjà sorti (montants négatifs réalisés)
                 'already_in' => 0,       // Déjà rentré (montants positifs réalisés)
                 'expected_out' => 0,     // Prévu à sortir (montants négatifs attendus)
-                'expected_in' => 0       // Prévu à rentrer (montants positifs attendus)
+                'expected_in' => 0,       // Prévu à rentrer (montants positifs attendus)
             ],
             'available_months' => $this->getAvailableMonths($user),
         ];
@@ -285,7 +285,8 @@ readonly class RecurringTransactionService
     }
 
     /**
-     * Récupère tous les mois budgétaires disponibles
+     * Récupère tous les mois budgétaires disponibles.
+     *
      * @return array<string>
      */
     private function getAvailableMonths(User $user): array
@@ -301,27 +302,32 @@ readonly class RecurringTransactionService
             ->getResult();
 
         $months = array_column($results, 'budgetMonth');
-        return array_filter($months, static fn($month) => $month !== null);
+
+        return array_filter($months, static fn ($month) => $month !== null);
     }
 
     /**
-     * Calcule le mois budgétaire précédent
-     * @throws DateMalformedStringException
+     * Calcule le mois budgétaire précédent.
+     *
+     * @throws \DateMalformedStringException
      */
     private function getPreviousMonth(string $currentMonth): string
     {
-        $date = DateTime::createFromFormat('Y-m', $currentMonth);
+        $date = \DateTime::createFromFormat('Y-m', $currentMonth);
         if (!$date) {
             return '';
         }
 
         $date->modify('-1 month');
+
         return $date->format('Y-m');
     }
 
     /**
-     * Récupère toutes les données mensuelles pour plusieurs récurrentes en une seule requête
+     * Récupère toutes les données mensuelles pour plusieurs récurrentes en une seule requête.
+     *
      * @param array<string> $recurringIds
+     *
      * @return array<string, array{transactions: array<Transaction>, total: float}>
      */
     private function getMonthlyDataForAllRecurring(array $recurringIds, string $month): array
@@ -356,7 +362,7 @@ readonly class RecurringTransactionService
             if (!isset($groupedData[$recurringId])) {
                 $groupedData[$recurringId] = [
                     'transactions' => [],
-                    'total' => 0
+                    'total' => 0,
                 ];
             }
 
@@ -368,8 +374,10 @@ readonly class RecurringTransactionService
     }
 
     /**
-     * Récupère les dernières transactions pour plusieurs récurrentes en une seule requête
+     * Récupère les dernières transactions pour plusieurs récurrentes en une seule requête.
+     *
      * @param array<RecurringTransaction> $recurringTransactions
+     *
      * @return array<string, Transaction>
      */
     private function getLatestTransactionsForRecurring(array $recurringTransactions): array
@@ -378,7 +386,7 @@ readonly class RecurringTransactionService
             return [];
         }
 
-        $recurringIds = array_map(static fn($rt) => $rt->getId()?->toString() ?? '', $recurringTransactions);
+        $recurringIds = array_map(static fn ($rt) => $rt->getId()?->toString() ?? '', $recurringTransactions);
         $recurringIds = array_filter($recurringIds);
 
         // Récupérer toutes les transactions pour ces récurrentes
@@ -408,5 +416,4 @@ readonly class RecurringTransactionService
 
         return $latestTransactions;
     }
-
 }

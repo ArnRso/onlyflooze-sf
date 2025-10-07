@@ -7,23 +7,20 @@ use App\Entity\CsvImportSession;
 use App\Entity\Transaction;
 use App\Entity\User;
 use Doctrine\ORM\EntityManagerInterface;
-use Exception;
 
 readonly class TransactionImportService
 {
     public function __construct(
         private EntityManagerInterface $entityManager,
-        private CsvParserService       $csvParserService
-    )
-    {
+        private CsvParserService $csvParserService,
+    ) {
     }
 
     public function importTransactionsFromCsv(
-        string           $filePath,
+        string $filePath,
         CsvImportProfile $profile,
-        User             $user
-    ): CsvImportSession
-    {
+        User $user,
+    ): CsvImportSession {
         // Create import session
         $session = new CsvImportSession();
         $session->setUser($user);
@@ -48,8 +45,7 @@ readonly class TransactionImportService
             $session->setErrors($results['errors']);
             $session->setErrorDetails($results['error_details']);
             $session->setStatus('completed');
-
-        } catch (Exception $e) {
+        } catch (\Exception $e) {
             $session->setStatus('failed');
             $session->setNotes($e->getMessage());
             $session->setErrors(1);
@@ -62,6 +58,7 @@ readonly class TransactionImportService
 
     /**
      * @param array<int, array<string, mixed>> $csvData
+     *
      * @return array{success: int, duplicates: int, errors: int, error_details: array<array{row: int, message: mixed, data: mixed}>}
      */
     private function processImportData(array $csvData, User $user): array
@@ -70,17 +67,17 @@ readonly class TransactionImportService
             'success' => 0,
             'duplicates' => 0,
             'errors' => 0,
-            'error_details' => []
+            'error_details' => [],
         ];
 
         foreach ($csvData as $index => $rowData) {
             // Skip rows that had parsing errors
             if (isset($rowData['error']) && $rowData['error']) {
-                $results['errors']++;
+                ++$results['errors'];
                 $results['error_details'][] = [
                     'row' => $index + 1,
                     'message' => $rowData['message'],
-                    'data' => $rowData['row_data'] ?? null
+                    'data' => $rowData['row_data'] ?? null,
                 ];
                 continue;
             }
@@ -90,21 +87,20 @@ readonly class TransactionImportService
 
                 // Check for duplicates manually as backup
                 if ($this->isDuplicateTransaction($transaction, $user)) {
-                    $results['duplicates']++;
+                    ++$results['duplicates'];
                     continue;
                 }
 
                 $this->entityManager->persist($transaction);
                 $this->entityManager->flush(); // Flush immediately to catch constraint violations
 
-                $results['success']++;
-
-            } catch (Exception $e) {
-                $results['errors']++;
+                ++$results['success'];
+            } catch (\Exception $e) {
+                ++$results['errors'];
                 $results['error_details'][] = [
                     'row' => $index + 1,
                     'message' => $e->getMessage(),
-                    'data' => $rowData
+                    'data' => $rowData,
                 ];
             }
         }
@@ -124,7 +120,7 @@ readonly class TransactionImportService
         $transaction->setUser($user);
         $transaction->setTransactionDate($rowData['date']);
         $transaction->setLabel($rowData['label']);
-        $transaction->setAmount((string)$rowData['amount']);
+        $transaction->setAmount((string) $rowData['amount']);
 
         // Try to determine budget month from transaction date
         $budgetMonth = $rowData['date']->format('Y-m');
@@ -140,7 +136,7 @@ readonly class TransactionImportService
                 'user' => $user,
                 'transactionDate' => $transaction->getTransactionDate(),
                 'amount' => $transaction->getAmount(),
-                'label' => $transaction->getLabel()
+                'label' => $transaction->getLabel(),
             ]);
 
         return $existingTransaction !== null;
@@ -162,9 +158,9 @@ readonly class TransactionImportService
             // First pass: count all valid rows and collect all errors
             foreach ($csvData as $index => $rowData) {
                 if (isset($rowData['error']) && $rowData['error']) {
-                    $totalErrors[] = "Ligne " . ($index + 1) . ": " . ($rowData['message'] ?? 'Erreur de parsing');
+                    $totalErrors[] = 'Ligne '.($index + 1).': '.($rowData['message'] ?? 'Erreur de parsing');
                 } else {
-                    $totalValidRows++;
+                    ++$totalValidRows;
                 }
             }
 
@@ -175,7 +171,7 @@ readonly class TransactionImportService
                     'raw_data' => $rowData['raw_data'] ?? [],
                     'parsed_data' => [],
                     'status' => 'ok',
-                    'message' => null
+                    'message' => null,
                 ];
 
                 if (isset($rowData['error']) && $rowData['error']) {
@@ -185,7 +181,7 @@ readonly class TransactionImportService
                     $rowResult['parsed_data'] = [
                         'date' => $rowData['date']->format('Y-m-d'),
                         'label' => $rowData['label'],
-                        'amount' => $rowData['amount']
+                        'amount' => $rowData['amount'],
                     ];
                 }
 
@@ -197,16 +193,15 @@ readonly class TransactionImportService
                 'valid_rows' => $totalValidRows, // Total valid rows in entire file
                 'sample_data' => $sampleData,   // Limited sample for preview
                 'errors' => array_slice($totalErrors, 0, 10), // Show max 10 errors in preview
-                'success' => true
+                'success' => true,
             ];
-
-        } catch (Exception $e) {
+        } catch (\Exception $e) {
             return [
                 'total_rows' => 0,
                 'valid_rows' => 0,
                 'sample_data' => [],
                 'errors' => [$e->getMessage()],
-                'success' => false
+                'success' => false,
             ];
         }
     }
@@ -220,11 +215,13 @@ readonly class TransactionImportService
 
         if (!file_exists($filePath)) {
             $errors[] = "Le fichier n'existe pas";
+
             return ['valid' => false, 'errors' => $errors];
         }
 
         if (!is_readable($filePath)) {
             $errors[] = "Le fichier n'est pas lisible";
+
             return ['valid' => false, 'errors' => $errors];
         }
 
@@ -232,7 +229,7 @@ readonly class TransactionImportService
         $maxSize = 10 * 1024 * 1024; // 10MB
 
         if ($fileSize > $maxSize) {
-            $errors[] = "Le fichier est trop volumineux (max 10MB)";
+            $errors[] = 'Le fichier est trop volumineux (max 10MB)';
         }
 
         // Test opening the file and validate format
@@ -243,7 +240,7 @@ readonly class TransactionImportService
             // Test reading first line
             $firstLine = fgets($handle);
             if ($firstLine === false) {
-                $errors[] = "Le fichier CSV semble vide";
+                $errors[] = 'Le fichier CSV semble vide';
             } else {
                 // Check file extension - allow csv and txt files, or validate content
                 $fileInfo = pathinfo($filePath);
@@ -252,7 +249,7 @@ readonly class TransactionImportService
 
                 // Check if file content looks like CSV (contains common separators)
                 if (!$hasValidExtension && !(str_contains($firstLine, ',') || str_contains($firstLine, ';') || str_contains($firstLine, "\t"))) {
-                    $errors[] = "Le fichier doit être au format CSV ou TXT (aucun séparateur détecté)";
+                    $errors[] = 'Le fichier doit être au format CSV ou TXT (aucun séparateur détecté)';
                 }
             }
             fclose($handle);
@@ -262,7 +259,7 @@ readonly class TransactionImportService
             'valid' => empty($errors),
             'errors' => $errors,
             'file_size' => $fileSize,
-            'file_info' => $fileInfo ?? null
+            'file_info' => $fileInfo ?? null,
         ];
     }
 }

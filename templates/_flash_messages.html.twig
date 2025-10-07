@@ -1,15 +1,15 @@
 {% for type, messages in app.flashes %}
-    {% set alertClass = 'alert-info' %}
+    {% set alert_class = 'alert-info' %}
     {% if type == 'success' %}
-        {% set alertClass = 'alert-success' %}
+        {% set alert_class = 'alert-success' %}
     {% elseif type == 'error' %}
-        {% set alertClass = 'alert-danger' %}
+        {% set alert_class = 'alert-danger' %}
     {% elseif type == 'warning' %}
-        {% set alertClass = 'alert-warning' %}
+        {% set alert_class = 'alert-warning' %}
     {% endif %}
 
     {% for message in messages %}
-        <div class="alert {{ alertClass }} alert-dismissible fade show" role="alert">
+        <div class="alert {{ alert_class }} alert-dismissible fade show" role="alert">
             {% if type == 'success' %}
                 <i class="fas fa-check-circle"></i>
             {% elseif type == 'error' %}

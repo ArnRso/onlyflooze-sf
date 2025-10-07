@@ -19,7 +19,7 @@
 
                     {% if app.user %}
                         <div class="alert alert-info">
-                            Vous êtes connecté(e) en tant que {{ app.user.fullName }}, 
+                            Vous êtes connecté(e) en tant que {{ app.user.fullName }},
                             <a href="{{ path('app_logout') }}" class="text-decoration-none">Se déconnecter</a>
                         </div>
                     {% endif %}
@@ -27,13 +27,13 @@
                     <form method="post">
                         <div class="mb-3">
                             <label for="username" class="form-label">Email</label>
-                            <input type="email" value="{{ last_username }}" name="_username" id="username" 
+                            <input type="email" value="{{ last_username }}" name="_username" id="username"
                                    class="form-control form-control-lg" autocomplete="email" required autofocus>
                         </div>
 
                         <div class="mb-4">
                             <label for="password" class="form-label">Mot de passe</label>
-                            <input type="password" name="_password" id="password" 
+                            <input type="password" name="_password" id="password"
                                    class="form-control form-control-lg" autocomplete="current-password" required>
                         </div>
 

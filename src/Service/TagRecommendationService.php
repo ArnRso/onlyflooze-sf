@@ -33,17 +33,17 @@ class TagRecommendationService
     private const float SIMILARITY_THRESHOLD_LOW = 85.0;
 
     public function __construct(
-        private readonly TagRepository          $tagRepository,
-        private readonly EntityManagerInterface $entityManager
-    )
-    {
+        private readonly TagRepository $tagRepository,
+        private readonly EntityManagerInterface $entityManager,
+    ) {
     }
 
     /**
      * Retourne les tags recommandés pour une transaction donnée.
      *
      * @param Transaction $transaction La transaction à analyser
-     * @param int $limit Nombre maximum de recommandations à retourner
+     * @param int         $limit       Nombre maximum de recommandations à retourner
+     *
      * @return TagRecommendation[] Tableau de recommandations triées par confiance décroissante
      */
     public function getRecommendations(Transaction $transaction, int $limit = 5): array
@@ -80,7 +80,7 @@ class TagRecommendationService
         $recommendations = $this->excludeExistingTags($recommendations, $transaction);
 
         // Trier par confiance décroissante et limiter
-        usort($recommendations, static fn($a, $b) => $b->getConfidence() <=> $a->getConfidence());
+        usort($recommendations, static fn ($a, $b) => $b->getConfidence() <=> $a->getConfidence());
 
         return array_slice($recommendations, 0, $limit);
     }
@@ -109,7 +109,7 @@ class TagRecommendationService
             ->setParameter('label', $label)
             ->setParameter('currentId', $transaction->getId());
 
-        $totalWithLabel = (int)$qbTotal->getQuery()->getSingleScalarResult();
+        $totalWithLabel = (int) $qbTotal->getQuery()->getSingleScalarResult();
 
         if ($totalWithLabel === 0) {
             return [];
@@ -141,7 +141,7 @@ class TagRecommendationService
                 if (!isset($tagCounts[$tagId])) {
                     $tagCounts[$tagId] = ['tag' => $tag, 'count' => 0];
                 }
-                $tagCounts[$tagId]['count']++;
+                ++$tagCounts[$tagId]['count'];
             }
         }
 
@@ -330,7 +330,7 @@ class TagRecommendationService
                 ->andWhere('UPPER(t.label) LIKE :keyword')
                 ->andWhere('t.id != :currentId')
                 ->setParameter('user', $transaction->getUser())
-                ->setParameter('keyword', '%' . strtoupper($keyword) . '%')
+                ->setParameter('keyword', '%'.strtoupper($keyword).'%')
                 ->setParameter('currentId', $transaction->getId())
                 ->setMaxResults(30);
 
@@ -508,9 +508,10 @@ class TagRecommendationService
      * Si plusieurs recommandations pointent vers le même tag :
      * - Garde la meilleure confiance
      * - Ajoute un bonus si multiple sources (cohérence)
-     * - Combine les raisons
+     * - Combine les raisons.
      *
      * @param TagRecommendation[] $recommendations
+     *
      * @return TagRecommendation[]
      */
     private function mergeAndDeduplicateRecommendations(array $recommendations): array
@@ -582,6 +583,7 @@ class TagRecommendationService
      * Exclut les tags déjà assignés à la transaction.
      *
      * @param TagRecommendation[] $recommendations
+     *
      * @return TagRecommendation[]
      */
     private function excludeExistingTags(array $recommendations, Transaction $transaction): array
@@ -598,6 +600,7 @@ class TagRecommendationService
             $recommendations,
             static function (TagRecommendation $rec) use ($existingTagIds) {
                 $recId = $rec->getTag()->getId();
+
                 return $recId === null || !in_array($recId->toString(), $existingTagIds, true);
             }
         );

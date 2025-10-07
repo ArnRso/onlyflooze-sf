@@ -3,25 +3,23 @@
 namespace App\Service;
 
 use App\Entity\CsvImportProfile;
-use DateTimeImmutable;
-use Exception;
-use RuntimeException;
 
 readonly class CsvParserService
 {
     /**
      * @return array<string, mixed>
-     * @throws Exception
+     *
+     * @throws \Exception
      */
     public function analyzeFile(string $filePath, string $delimiter, string $encoding): array
     {
         if (!file_exists($filePath)) {
-            throw new RuntimeException("Fichier CSV introuvable : $filePath");
+            throw new \RuntimeException("Fichier CSV introuvable : $filePath");
         }
 
         $handle = fopen($filePath, 'rb');
         if ($handle === false) {
-            throw new RuntimeException("Impossible d'ouvrir le fichier CSV");
+            throw new \RuntimeException("Impossible d'ouvrir le fichier CSV");
         }
 
         $analysis = [
@@ -30,7 +28,7 @@ readonly class CsvParserService
             'consistent_columns' => true,
             'sample_rows' => [],
             'delimiter' => $delimiter,
-            'encoding' => $encoding
+            'encoding' => $encoding,
         ];
 
         try {
@@ -52,7 +50,7 @@ readonly class CsvParserService
                     $analysis['sample_rows'][] = $row;
                 }
 
-                $analysis['total_rows']++;
+                ++$analysis['total_rows'];
             }
         } finally {
             fclose($handle);
@@ -63,47 +61,48 @@ readonly class CsvParserService
 
     /**
      * @return array<int, array<string, mixed>>
-     * @throws Exception
+     *
+     * @throws \Exception
      */
     public function parseCsvFile(string $filePath, CsvImportProfile $profile): array
     {
         if (!file_exists($filePath)) {
-            throw new RuntimeException("Fichier CSV introuvable : $filePath");
+            throw new \RuntimeException("Fichier CSV introuvable : $filePath");
         }
 
         $data = [];
         $handle = fopen($filePath, 'rb');
 
         if ($handle === false) {
-            throw new RuntimeException("Impossible d'ouvrir le fichier CSV");
+            throw new \RuntimeException("Impossible d'ouvrir le fichier CSV");
         }
 
         try {
             $rowIndex = 0;
             while (($row = fgetcsv($handle, 0, $profile->getDelimiter())) !== false) {
                 if ($rowIndex === 0 && $profile->isHasHeader()) {
-                    $rowIndex++;
+                    ++$rowIndex;
                     continue;
                 }
 
                 try {
                     // Ensure all values are strings
-                    $cleanRow = array_map(static fn($value) => (string)($value ?? ''), $row);
+                    $cleanRow = array_map(static fn ($value) => (string) ($value ?? ''), $row);
                     $parsedRow = $this->parseRow($cleanRow, $profile);
                     if ($parsedRow) {
                         $parsedRow['raw_data'] = $row;
                         $data[] = $parsedRow;
                     }
-                } catch (Exception $e) {
+                } catch (\Exception $e) {
                     $data[] = [
                         'error' => true,
                         'message' => $e->getMessage(),
                         'raw_data' => $row,
-                        'row_index' => $rowIndex
+                        'row_index' => $rowIndex,
                     ];
                 }
 
-                $rowIndex++;
+                ++$rowIndex;
             }
         } finally {
             fclose($handle);
@@ -114,45 +113,47 @@ readonly class CsvParserService
 
     /**
      * @param array<int, string> $row
+     *
      * @return array<string, mixed>
-     * @throws Exception
+     *
+     * @throws \Exception
      */
     private function parseRow(array $row, CsvImportProfile $profile): array
     {
         $mapping = $profile->getColumnMapping();
 
         if (empty($mapping)) {
-            throw new RuntimeException("Configuration de mapping des colonnes manquante");
+            throw new \RuntimeException('Configuration de mapping des colonnes manquante');
         }
 
         $parsedData = [];
 
         // Parse date
         if (!isset($mapping['date'], $row[$mapping['date']])) {
-            throw new RuntimeException("Colonne date manquante ou non configurée");
+            throw new \RuntimeException('Colonne date manquante ou non configurée');
         }
 
         $dateString = trim($row[$mapping['date']]);
         if (empty($dateString)) {
-            throw new RuntimeException("Date vide dans la ligne");
+            throw new \RuntimeException('Date vide dans la ligne');
         }
 
         $parsedData['date'] = $this->parseDate($dateString, $profile->getDateFormat());
 
         // Parse label
         if (!isset($mapping['label'], $row[$mapping['label']])) {
-            throw new RuntimeException("Colonne libellé manquante ou non configurée");
+            throw new \RuntimeException('Colonne libellé manquante ou non configurée');
         }
 
         $parsedData['label'] = trim($row[$mapping['label']]);
         if (empty($parsedData['label'])) {
-            throw new RuntimeException("Libellé vide dans la ligne");
+            throw new \RuntimeException('Libellé vide dans la ligne');
         }
 
         // Parse amount based on type
         if ($profile->getAmountType() === 'single') {
             if (!isset($mapping['amount'], $row[$mapping['amount']])) {
-                throw new RuntimeException("Colonne montant manquante ou non configurée");
+                throw new \RuntimeException('Colonne montant manquante ou non configurée');
             }
 
             $parsedData['amount'] = $this->parseAmount($row[$mapping['amount']]);
@@ -176,7 +177,7 @@ readonly class CsvParserService
             }
 
             if ($creditAmount == 0 && $debitAmount == 0) {
-                throw new RuntimeException("Aucun montant trouvé dans les colonnes crédit/débit");
+                throw new \RuntimeException('Aucun montant trouvé dans les colonnes crédit/débit');
             }
 
             // Credit is positive, debit is negative
@@ -187,11 +188,11 @@ readonly class CsvParserService
     }
 
     /**
-     * @throws Exception
+     * @throws \Exception
      */
-    private function parseDate(string $dateString, string $format): DateTimeImmutable
+    private function parseDate(string $dateString, string $format): \DateTimeImmutable
     {
-        $date = DateTimeImmutable::createFromFormat($format, $dateString);
+        $date = \DateTimeImmutable::createFromFormat($format, $dateString);
 
         if ($date === false) {
             // Try common fallback formats
@@ -199,7 +200,7 @@ readonly class CsvParserService
 
             foreach ($fallbackFormats as $fallbackFormat) {
                 if ($fallbackFormat !== $format) {
-                    $date = DateTimeImmutable::createFromFormat($fallbackFormat, $dateString);
+                    $date = \DateTimeImmutable::createFromFormat($fallbackFormat, $dateString);
                     if ($date !== false) {
                         break;
                     }
@@ -208,14 +209,14 @@ readonly class CsvParserService
         }
 
         if ($date === false) {
-            throw new RuntimeException("Format de date invalide : $dateString (format attendu : $format)");
+            throw new \RuntimeException("Format de date invalide : $dateString (format attendu : $format)");
         }
 
         return $date;
     }
 
     /**
-     * @throws Exception
+     * @throws \Exception
      */
     private function parseAmount(string $amountString): float
     {
@@ -248,10 +249,10 @@ readonly class CsvParserService
         }
 
         if (!is_numeric($cleanAmount)) {
-            throw new RuntimeException("Montant invalide : $amountString");
+            throw new \RuntimeException("Montant invalide : $amountString");
         }
 
-        return (float)$cleanAmount;
+        return (float) $cleanAmount;
     }
 
     public function detectDelimiter(string $filePath): string

@@ -23,7 +23,7 @@ class CsvUploadType extends AbstractType
                 'label' => 'Fichier CSV',
                 'attr' => [
                     'class' => 'form-control',
-                    'accept' => '.csv,.txt'
+                    'accept' => '.csv,.txt',
                 ],
                 'constraints' => [
                     new NotBlank(['message' => 'Veuillez sélectionner un fichier']),
@@ -35,10 +35,10 @@ class CsvUploadType extends AbstractType
                             'application/csv',
                             'text/comma-separated-values',
                             'application/vnd.ms-excel',
-                            'application/octet-stream'
+                            'application/octet-stream',
                         ],
                         'mimeTypesMessage' => 'Veuillez uploader un fichier CSV valide',
-                    ])
+                    ]),
                 ],
             ])
             ->add('profile', EntityType::class, [

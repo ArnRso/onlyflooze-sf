@@ -8,18 +8,18 @@ Paramètres:
 - rounded: true/false pour badge arrondi (optionnel, défaut: true)
 #}
 
-{% set sizeClass = '' %}
+{% set size_class = '' %}
 {% if size is defined %}
     {% if size == 'sm' %}
-        {% set sizeClass = 'badge-sm' %}
+        {% set size_class = 'badge-sm' %}
     {% elseif size == 'lg' %}
-        {% set sizeClass = 'fs-6' %}
+        {% set size_class = 'fs-6' %}
     {% endif %}
 {% endif %}
 
-{% set roundedClass = rounded is defined and rounded == false ? '' : 'rounded-pill' %}
+{% set rounded_class = rounded is defined and rounded == false ? '' : 'rounded-pill' %}
 
-<span class="badge {{ roundedClass }} {{ sizeClass }} {{ class|default('') }}"
+<span class="badge {{ rounded_class }} {{ size_class }} {{ class|default('') }}"
       style="background-color: {{ tag.color }}; color: {{ tag_text_color(tag.color) }};">
     {{ tag.name }}
 </span>

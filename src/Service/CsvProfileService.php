@@ -10,10 +10,9 @@ use Doctrine\ORM\EntityManagerInterface;
 readonly class CsvProfileService
 {
     public function __construct(
-        private EntityManagerInterface     $entityManager,
-        private CsvImportProfileRepository $csvImportProfileRepository
-    )
-    {
+        private EntityManagerInterface $entityManager,
+        private CsvImportProfileRepository $csvImportProfileRepository,
+    ) {
     }
 
     public function updateProfile(CsvImportProfile $profile): CsvImportProfile
@@ -62,7 +61,7 @@ readonly class CsvProfileService
             'date' => 0,
             'label' => 1,
             'debit' => 2,
-            'credit' => 3
+            'credit' => 3,
         ]);
 
         $profiles[] = $this->createProfile($caProfile, $user);
@@ -79,7 +78,7 @@ readonly class CsvProfileService
         $bnpProfile->setColumnMapping([
             'date' => 0,
             'label' => 1,
-            'amount' => 2
+            'amount' => 2,
         ]);
 
         $profiles[] = $this->createProfile($bnpProfile, $user);
@@ -96,7 +95,7 @@ readonly class CsvProfileService
         $genericProfile->setColumnMapping([
             'date' => 0,
             'label' => 1,
-            'amount' => 2
+            'amount' => 2,
         ]);
 
         $profiles[] = $this->createProfile($genericProfile, $user);
@@ -125,7 +124,7 @@ readonly class CsvProfileService
             'd-m-Y' => 'dd-mm-yyyy (31-12-2025)',
             'm/d/Y' => 'mm/dd/yyyy (12/31/2025)',
             'd/m/y' => 'dd/mm/yy (31/12/25)',
-            'Y/m/d' => 'yyyy/mm/dd (2025/12/31)'
+            'Y/m/d' => 'yyyy/mm/dd (2025/12/31)',
         ];
     }
 
@@ -138,7 +137,7 @@ readonly class CsvProfileService
             ',' => 'Virgule (,)',
             ';' => 'Point-virgule (;)',
             "\t" => 'Tabulation',
-            '|' => 'Pipe (|)'
+            '|' => 'Pipe (|)',
         ];
     }
 
@@ -150,7 +149,7 @@ readonly class CsvProfileService
         return [
             'UTF-8' => 'UTF-8',
             'ISO-8859-1' => 'ISO-8859-1 (Latin-1)',
-            'Windows-1252' => 'Windows-1252'
+            'Windows-1252' => 'Windows-1252',
         ];
     }
 
@@ -161,12 +160,13 @@ readonly class CsvProfileService
     {
         return [
             'single' => 'Montant unique (positif/négatif)',
-            'credit_debit' => 'Colonnes séparées Crédit/Débit'
+            'credit_debit' => 'Colonnes séparées Crédit/Débit',
         ];
     }
 
     /**
      * @param array<string, mixed> $mapping
+     *
      * @return array<string>
      */
     public function validateProfileMapping(array $mapping, string $amountType): array
@@ -197,7 +197,7 @@ readonly class CsvProfileService
         }
 
         // Check for duplicate column indices
-        $indices = array_filter($mapping, static fn($value) => $value !== '');
+        $indices = array_filter($mapping, static fn ($value) => $value !== '');
         if (count($indices) !== count(array_unique($indices))) {
             $errors[] = 'Les colonnes ne peuvent pas utiliser le même index';
         }

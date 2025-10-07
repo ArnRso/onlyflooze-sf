@@ -34,17 +34,18 @@ class RecurringTransactionRecommendationService
     private const float SIMILARITY_THRESHOLD_LOW = 85.0;
 
     public function __construct(
-        private readonly EntityManagerInterface         $entityManager
-    )
-    {
+        private readonly EntityManagerInterface $entityManager,
+    ) {
     }
 
     /**
      * Retourne les transactions récurrentes recommandées pour une transaction donnée.
      *
      * @param Transaction $transaction La transaction à analyser
-     * @param int $limit Nombre maximum de recommandations à retourner
+     * @param int         $limit       Nombre maximum de recommandations à retourner
+     *
      * @return RecurringTransactionRecommendation[] Tableau de recommandations triées par confiance décroissante
+     *
      * @throws ORMException
      * @throws OptimisticLockException
      */
@@ -82,7 +83,7 @@ class RecurringTransactionRecommendationService
         $recommendations = $this->excludeExisting($recommendations, $transaction);
 
         // Trier par confiance décroissante et limiter
-        usort($recommendations, static fn($a, $b) => $b->getConfidence() <=> $a->getConfidence());
+        usort($recommendations, static fn ($a, $b) => $b->getConfidence() <=> $a->getConfidence());
 
         return array_slice($recommendations, 0, $limit);
     }
@@ -91,8 +92,8 @@ class RecurringTransactionRecommendationService
      * Stratégie 1 : Trouve des transactions récurrentes basées sur une correspondance exacte du label.
      * Utilise un scoring bayésien pour calculer la probabilité P(recurring | label).
      *
-     * @param Transaction $transaction
      * @return RecurringTransactionRecommendation[]
+     *
      * @throws ORMException
      * @throws OptimisticLockException
      */
@@ -114,7 +115,7 @@ class RecurringTransactionRecommendationService
             ->setParameter('label', $label)
             ->setParameter('currentId', $transaction->getId());
 
-        $totalWithLabel = (int)$qbTotal->getQuery()->getSingleScalarResult();
+        $totalWithLabel = (int) $qbTotal->getQuery()->getSingleScalarResult();
 
         if ($totalWithLabel === 0) {
             return [];
@@ -187,8 +188,8 @@ class RecurringTransactionRecommendationService
     /**
      * Stratégie 2 : Trouve des transactions récurrentes basées sur des labels similaires (fuzzy matching).
      *
-     * @param Transaction $transaction
      * @return RecurringTransactionRecommendation[]
+     *
      * @throws ORMException
      * @throws OptimisticLockException
      */
@@ -296,8 +297,8 @@ class RecurringTransactionRecommendationService
     /**
      * Stratégie 3 : Trouve des transactions récurrentes basées sur des mots-clés du label.
      *
-     * @param Transaction $transaction
      * @return RecurringTransactionRecommendation[]
+     *
      * @throws ORMException
      * @throws OptimisticLockException
      */
@@ -327,7 +328,7 @@ class RecurringTransactionRecommendationService
                 ->andWhere('t.recurringTransaction IS NOT NULL')
                 ->andWhere('t.id != :currentId')
                 ->setParameter('user', $transaction->getUser())
-                ->setParameter('keyword', '%' . strtoupper($keyword) . '%')
+                ->setParameter('keyword', '%'.strtoupper($keyword).'%')
                 ->setParameter('currentId', $transaction->getId())
                 ->groupBy('rt_id')
                 ->orderBy('match_count', 'DESC')
@@ -492,8 +493,8 @@ class RecurringTransactionRecommendationService
     /**
      * Stratégie 4 : Retourne les transactions récurrentes les plus fréquemment utilisées.
      *
-     * @param Transaction $transaction
      * @return RecurringTransactionRecommendation[]
+     *
      * @throws ORMException
      * @throws OptimisticLockException
      */
@@ -542,9 +543,10 @@ class RecurringTransactionRecommendationService
      * Si plusieurs recommandations pointent vers la même transaction récurrente :
      * - Garde la meilleure confiance
      * - Ajoute un bonus si multiple sources (cohérence)
-     * - Combine les raisons
+     * - Combine les raisons.
      *
      * @param RecurringTransactionRecommendation[] $recommendations
+     *
      * @return RecurringTransactionRecommendation[]
      */
     private function mergeAndDeduplicateRecommendations(array $recommendations): array
@@ -616,6 +618,7 @@ class RecurringTransactionRecommendationService
      * Exclut la transaction récurrente déjà assignée.
      *
      * @param RecurringTransactionRecommendation[] $recommendations
+     *
      * @return RecurringTransactionRecommendation[]
      */
     private function excludeExisting(array $recommendations, Transaction $transaction): array
@@ -631,6 +634,7 @@ class RecurringTransactionRecommendationService
             $recommendations,
             static function (RecurringTransactionRecommendation $rec) use ($existingRtId) {
                 $recId = $rec->getRecurringTransaction()->getId();
+
                 return $recId === null || $recId->toString() !== $existingRtId;
             }
         );
