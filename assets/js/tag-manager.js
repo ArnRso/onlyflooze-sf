@@ -192,11 +192,11 @@ export class TagManager {
     }
 
     // Callback methods that can be overridden
-    onTagSelected(tag) {
+    onTagSelected(_tag) {
         // Override this method for custom behavior when a tag is selected from suggestions
     }
 
-    onTagToggled(tagId, isChecked) {
+    onTagToggled(_tagId, _isChecked) {
         // Override this method for custom behavior when a tag is toggled
     }
 }

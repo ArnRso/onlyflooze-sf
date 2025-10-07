@@ -9,10 +9,9 @@ use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 readonly class UserProfileService
 {
     public function __construct(
-        private EntityManagerInterface      $entityManager,
-        private UserPasswordHasherInterface $passwordHasher
-    )
-    {
+        private EntityManagerInterface $entityManager,
+        private UserPasswordHasherInterface $passwordHasher,
+    ) {
     }
 
     public function updateProfile(User $user, string $firstName, string $lastName): void

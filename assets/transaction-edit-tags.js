@@ -4,11 +4,11 @@ import {TagManager} from './js/tag-manager.js';
 document.addEventListener('DOMContentLoaded', function () {
     // Classe spécialisée pour l'édition de transaction
     class TransactionEditTagManager extends TagManager {
-        onTagSelected(tag) {
+        onTagSelected(_tag) {
             this.syncWithSymfonyForm();
         }
 
-        onTagToggled(tagId, isChecked) {
+        onTagToggled(_tagId, _isChecked) {
             this.syncWithSymfonyForm();
         }
 

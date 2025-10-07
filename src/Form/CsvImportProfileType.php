@@ -40,7 +40,7 @@ class CsvImportProfileType extends AbstractType
                 'attr' => [
                     'class' => 'form-control',
                     'rows' => 3,
-                    'placeholder' => 'Description optionnelle du profil'
+                    'placeholder' => 'Description optionnelle du profil',
                 ],
             ])
             ->add('delimiter', ChoiceType::class, [
@@ -76,7 +76,7 @@ class CsvImportProfileType extends AbstractType
                 'attr' => [
                     'class' => 'form-control',
                     'min' => 0,
-                    'placeholder' => '0'
+                    'placeholder' => '0',
                 ],
                 'constraints' => [
                     new NotBlank(['message' => 'La colonne date est obligatoire']),
@@ -89,7 +89,7 @@ class CsvImportProfileType extends AbstractType
                 'attr' => [
                     'class' => 'form-control',
                     'min' => 0,
-                    'placeholder' => '1'
+                    'placeholder' => '1',
                 ],
                 'constraints' => [
                     new NotBlank(['message' => 'La colonne libellé est obligatoire']),
@@ -103,7 +103,7 @@ class CsvImportProfileType extends AbstractType
                 'attr' => [
                     'class' => 'form-control',
                     'min' => 0,
-                    'placeholder' => '2'
+                    'placeholder' => '2',
                 ],
                 'constraints' => [
                     new Range(['min' => 0, 'max' => 50]),
@@ -116,7 +116,7 @@ class CsvImportProfileType extends AbstractType
                 'attr' => [
                     'class' => 'form-control',
                     'min' => 0,
-                    'placeholder' => '3'
+                    'placeholder' => '3',
                 ],
                 'constraints' => [
                     new Range(['min' => 0, 'max' => 50]),
@@ -129,7 +129,7 @@ class CsvImportProfileType extends AbstractType
                 'attr' => [
                     'class' => 'form-control',
                     'min' => 0,
-                    'placeholder' => '4'
+                    'placeholder' => '4',
                 ],
                 'constraints' => [
                     new Range(['min' => 0, 'max' => 50]),

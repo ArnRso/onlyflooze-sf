@@ -11,4 +11,5 @@ if (method_exists(Dotenv::class, 'bootEnv')) {
 }
 
 $kernel = new Kernel($_SERVER['APP_ENV'] ?? 'dev', (bool) ($_SERVER['APP_DEBUG'] ?? false));
+
 return new Application($kernel);

@@ -75,7 +75,7 @@ class RecurringTransactionRepository extends ServiceEntityRepository
 
     public function getCountByUser(User $user): int
     {
-        return (int)$this->createQueryBuilder('rt')
+        return (int) $this->createQueryBuilder('rt')
             ->select('COUNT(rt.id)')
             ->where('rt.user = :user')
             ->setParameter('user', $user)

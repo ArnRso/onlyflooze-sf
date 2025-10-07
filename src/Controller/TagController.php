@@ -18,9 +18,8 @@ use Symfony\Component\Security\Http\Attribute\IsGranted;
 class TagController extends AbstractController
 {
     public function __construct(
-        private readonly TagService $tagService
-    )
-    {
+        private readonly TagService $tagService,
+    ) {
     }
 
     #[Route('/', name: 'app_tag_index', methods: ['GET'])]
@@ -102,7 +101,7 @@ class TagController extends AbstractController
     {
         $this->denyAccessUnlessGranted(TagVoter::DELETE, $tag);
 
-        if ($this->isCsrfTokenValid('delete' . $tag->getId(), $request->getPayload()->getString('_token'))) {
+        if ($this->isCsrfTokenValid('delete'.$tag->getId(), $request->getPayload()->getString('_token'))) {
             $this->tagService->deleteTag($tag);
             $this->addFlash('success', 'Tag supprimé avec succès.');
         }

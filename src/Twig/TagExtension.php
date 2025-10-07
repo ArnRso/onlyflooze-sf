@@ -15,7 +15,7 @@ class TagExtension extends AbstractExtension
     }
 
     /**
-     * Calcule la couleur de texte optimale (blanc ou noir) en fonction de la couleur de fond
+     * Calcule la couleur de texte optimale (blanc ou noir) en fonction de la couleur de fond.
      */
     public function getTextColor(string $backgroundColor): string
     {

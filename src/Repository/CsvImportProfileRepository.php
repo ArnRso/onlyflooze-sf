@@ -43,7 +43,7 @@ class CsvImportProfileRepository extends ServiceEntityRepository
 
     public function getCountByUser(User $user): int
     {
-        return (int)$this->createQueryBuilder('p')
+        return (int) $this->createQueryBuilder('p')
             ->select('COUNT(p.id)')
             ->where('p.user = :user')
             ->setParameter('user', $user)

@@ -22,15 +22,15 @@ class RegistrationFormType extends AbstractType
         $builder
             ->add('firstName', null, [
                 'label' => 'Prénom',
-                'attr' => ['class' => 'form-control']
+                'attr' => ['class' => 'form-control'],
             ])
             ->add('lastName', null, [
                 'label' => 'Nom',
-                'attr' => ['class' => 'form-control']
+                'attr' => ['class' => 'form-control'],
             ])
             ->add('email', null, [
                 'label' => 'Email',
-                'attr' => ['class' => 'form-control']
+                'attr' => ['class' => 'form-control'],
             ])
             ->add('agreeTerms', CheckboxType::class, [
                 'mapped' => false,

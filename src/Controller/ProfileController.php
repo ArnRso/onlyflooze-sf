@@ -17,9 +17,8 @@ use Symfony\Component\Security\Http\Attribute\IsGranted;
 class ProfileController extends AbstractController
 {
     public function __construct(
-        private readonly UserProfileService $userProfileService
-    )
-    {
+        private readonly UserProfileService $userProfileService,
+    ) {
     }
 
     #[Route('', name: 'app_profile')]

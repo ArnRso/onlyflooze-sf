@@ -11,9 +11,8 @@ readonly class TagService
 {
     public function __construct(
         private EntityManagerInterface $entityManager,
-        private TagRepository          $tagRepository
-    )
-    {
+        private TagRepository $tagRepository,
+    ) {
     }
 
     public function updateTag(Tag $tag): Tag
@@ -69,10 +68,10 @@ readonly class TagService
                 $budgetMonth = $transaction->getBudgetMonth();
 
                 if ($budgetMonth === $currentMonth) {
-                    $currentMonthStats['count']++;
+                    ++$currentMonthStats['count'];
                     $currentMonthStats['total'] += $transaction->getAmountAsFloat();
                 } elseif ($budgetMonth === $previousMonth) {
-                    $previousMonthStats['count']++;
+                    ++$previousMonthStats['count'];
                     $previousMonthStats['total'] += $transaction->getAmountAsFloat();
                 }
             }
@@ -102,7 +101,7 @@ readonly class TagService
         foreach ($tags as $tag) {
             $transactionCount = $tag->getTransactions()->count();
             if ($transactionCount > 0) {
-                $tagsWithTransactions++;
+                ++$tagsWithTransactions;
                 $totalTransactions += $transactionCount;
             }
         }
@@ -125,7 +124,8 @@ readonly class TagService
     }
 
     /**
-     * Statistiques pour un tag spécifique
+     * Statistiques pour un tag spécifique.
+     *
      * @return array{total_transactions: int, total_amount: float, average_amount: float, average_per_month: float, months_count: int}
      */
     public function getTagStats(Tag $tag): array
@@ -164,7 +164,8 @@ readonly class TagService
     }
 
     /**
-     * Totaux mensuels pour un tag spécifique
+     * Totaux mensuels pour un tag spécifique.
+     *
      * @return array<string, float>
      */
     public function getMonthlyTotalsForTag(Tag $tag): array
@@ -224,7 +225,7 @@ readonly class TagService
     }
 
     /**
-     * Génère une couleur hexadécimale aléatoire
+     * Génère une couleur hexadécimale aléatoire.
      */
     private function generateRandomColor(): string
     {
@@ -292,14 +293,14 @@ readonly class TagService
             '#ffc107', // Ambre doré
             '#ff5722', // Rouge tomate
             '#795548', // Terre de sienne
-            '#9e9e9e'  // Gris neutre
+            '#9e9e9e',  // Gris neutre
         ];
 
         return $colors[array_rand($colors)];
     }
 
     /**
-     * Initialise un nouveau tag avec une couleur aléatoire et l'utilisateur
+     * Initialise un nouveau tag avec une couleur aléatoire et l'utilisateur.
      */
     public function initializeNewTag(User $user): Tag
     {

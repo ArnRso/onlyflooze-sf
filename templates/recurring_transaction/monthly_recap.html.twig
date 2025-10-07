@@ -23,8 +23,8 @@
                     <div class="col-md-6">
                         <div class="d-flex align-items-center">
                             <!-- Bouton mois précédent -->
-                            {% set previousMonth = selected_month|date_modify('-1 month')|date('Y-m') %}
-                            <a href="{{ path('app_recurring_transaction_monthly_recap', {'month': previousMonth}) }}"
+                            {% set previous_month = selected_month|date_modify('-1 month')|date('Y-m') %}
+                            <a href="{{ path('app_recurring_transaction_monthly_recap', {'month': previous_month}) }}"
                                class="btn btn-outline-secondary me-3" title="Mois précédent">
                                 <i class="fas fa-chevron-left"></i>
                             </a>
@@ -36,23 +36,23 @@
                                         {% for month in monthly_data.available_months %}
                                             <option value="{{ month }}"
                                                     {% if month == selected_month %}selected{% endif %}>
-                                                {% set monthNames = {
+                                                {% set month_names = {
                                                     '01': 'janvier', '02': 'février', '03': 'mars', '04': 'avril',
                                                     '05': 'mai', '06': 'juin', '07': 'juillet', '08': 'août',
                                                     '09': 'septembre', '10': 'octobre', '11': 'novembre', '12': 'décembre'
                                                 } %}
-                                                {{ monthNames[month|date('m')] }} {{ month|date('Y') }}
+                                                {{ month_names[month|date('m')] }} {{ month|date('Y') }}
                                             </option>
                                         {% endfor %}
                                         <!-- Ajouter le mois courant s'il n'existe pas -->
                                         {% if selected_month not in monthly_data.available_months %}
                                             <option value="{{ selected_month }}" selected>
-                                                {% set monthNames = {
+                                                {% set month_names = {
                                                     '01': 'janvier', '02': 'février', '03': 'mars', '04': 'avril',
                                                     '05': 'mai', '06': 'juin', '07': 'juillet', '08': 'août',
                                                     '09': 'septembre', '10': 'octobre', '11': 'novembre', '12': 'décembre'
                                                 } %}
-                                                {{ monthNames[selected_month|date('m')] }} {{ selected_month|date('Y') }}
+                                                {{ month_names[selected_month|date('m')] }} {{ selected_month|date('Y') }}
                                                 (nouveau)
                                             </option>
                                         {% endif %}
@@ -61,8 +61,8 @@
                             </div>
 
                             <!-- Bouton mois suivant -->
-                            {% set nextMonth = selected_month|date_modify('+1 month')|date('Y-m') %}
-                            <a href="{{ path('app_recurring_transaction_monthly_recap', {'month': nextMonth}) }}"
+                            {% set next_month = selected_month|date_modify('+1 month')|date('Y-m') %}
+                            <a href="{{ path('app_recurring_transaction_monthly_recap', {'month': next_month}) }}"
                                class="btn btn-outline-secondary ms-3" title="Mois suivant">
                                 <i class="fas fa-chevron-right"></i>
                             </a>

@@ -4,7 +4,6 @@ namespace App\Entity;
 
 use App\Entity\Trait\TimestampableTrait;
 use App\Repository\TransactionRepository;
-use DateTimeImmutable;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\DBAL\Types\Types;
@@ -27,7 +26,7 @@ class Transaction
     #[ORM\Column(length: 255)]
     private ?string $label = null;
     #[ORM\Column(type: Types::DATE_IMMUTABLE)]
-    private ?DateTimeImmutable $transactionDate = null;
+    private ?\DateTimeImmutable $transactionDate = null;
     #[ORM\Column(type: Types::DECIMAL, precision: 10, scale: 2)]
     private ?string $amount = null;
     #[ORM\Column(type: Types::TEXT, nullable: true)]
@@ -70,12 +69,12 @@ class Transaction
         return $this;
     }
 
-    public function getTransactionDate(): ?DateTimeImmutable
+    public function getTransactionDate(): ?\DateTimeImmutable
     {
         return $this->transactionDate;
     }
 
-    public function setTransactionDate(DateTimeImmutable $transactionDate): static
+    public function setTransactionDate(\DateTimeImmutable $transactionDate): static
     {
         $this->transactionDate = $transactionDate;
 
@@ -96,7 +95,7 @@ class Transaction
 
     public function getAmountAsFloat(): float
     {
-        return (float)$this->amount;
+        return (float) $this->amount;
     }
 
     public function getInfo(): ?string

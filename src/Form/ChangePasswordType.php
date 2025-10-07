@@ -23,7 +23,7 @@ class ChangePasswordType extends AbstractType
                 'mapped' => false,
                 'attr' => [
                     'autocomplete' => 'current-password',
-                    'class' => 'form-control'
+                    'class' => 'form-control',
                 ],
                 'constraints' => [
                     new NotBlank([
@@ -39,11 +39,11 @@ class ChangePasswordType extends AbstractType
                 'required' => true,
                 'first_options' => [
                     'label' => 'Nouveau mot de passe',
-                    'attr' => ['autocomplete' => 'new-password']
+                    'attr' => ['autocomplete' => 'new-password'],
                 ],
                 'second_options' => [
                     'label' => 'Confirmer le nouveau mot de passe',
-                    'attr' => ['autocomplete' => 'new-password']
+                    'attr' => ['autocomplete' => 'new-password'],
                 ],
                 'constraints' => [
                     new NotBlank([

@@ -25,11 +25,10 @@ use Symfony\Component\Validator\Constraints\Regex;
 class TransactionType extends AbstractType
 {
     public function __construct(
-        private readonly TagRepository                  $tagRepository,
+        private readonly TagRepository $tagRepository,
         private readonly RecurringTransactionRepository $recurringTransactionRepository,
-        private readonly Security                       $security
-    )
-    {
+        private readonly Security $security,
+    ) {
     }
 
     public function buildForm(FormBuilderInterface $builder, array $options): void
@@ -70,7 +69,7 @@ class TransactionType extends AbstractType
                 'attr' => [
                     'class' => 'form-control',
                     'rows' => 3,
-                    'placeholder' => 'Informations optionnelles...'
+                    'placeholder' => 'Informations optionnelles...',
                 ],
             ])
             ->add('tags', EntityType::class, [
@@ -82,10 +81,11 @@ class TransactionType extends AbstractType
                 'label' => 'Tags',
                 'attr' => [
                     'class' => 'form-select',
-                    'multiple' => true
+                    'multiple' => true,
                 ],
                 'query_builder' => function () {
                     $user = $this->security->getUser();
+
                     return $this->tagRepository->createQueryBuilder('t')
                         ->where('t.user = :user')
                         ->setParameter('user', $user)
@@ -98,7 +98,7 @@ class TransactionType extends AbstractType
                 'attr' => [
                     'class' => 'form-control',
                     'placeholder' => '2025-01',
-                    'pattern' => '[0-9]{4}-[0-9]{2}'
+                    'pattern' => '[0-9]{4}-[0-9]{2}',
                 ],
                 'help' => 'Format : YYYY-MM (ex: 2025-01 pour janvier 2025)',
                 'constraints' => [
@@ -115,10 +115,11 @@ class TransactionType extends AbstractType
                 'label' => 'Transaction récurrente',
                 'placeholder' => 'Sélectionner une transaction récurrente...',
                 'attr' => [
-                    'class' => 'form-select'
+                    'class' => 'form-select',
                 ],
                 'query_builder' => function () {
                     $user = $this->security->getUser();
+
                     return $this->recurringTransactionRepository->createQueryBuilder('rt')
                         ->where('rt.user = :user')
                         ->setParameter('user', $user)

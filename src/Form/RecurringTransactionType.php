@@ -21,7 +21,7 @@ class RecurringTransactionType extends AbstractType
                 'label' => 'Nom de la transaction récurrente',
                 'attr' => [
                     'class' => 'form-control',
-                    'placeholder' => 'Facture électricité, Salaire, Crédit maison...'
+                    'placeholder' => 'Facture électricité, Salaire, Crédit maison...',
                 ],
                 'constraints' => [
                     new NotBlank([

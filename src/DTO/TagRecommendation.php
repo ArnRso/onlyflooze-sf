@@ -2,7 +2,6 @@
 
 namespace App\DTO;
 
-
 use App\Entity\Tag;
 
 /**
@@ -11,16 +10,15 @@ use App\Entity\Tag;
 readonly class TagRecommendation
 {
     /**
-     * @param Tag $tag Le tag recommandé
-     * @param float $confidence Niveau de confiance de la recommandation (0-100%)
-     * @param string $reason Raison de la recommandation (pour le debug/UI)
+     * @param Tag    $tag        Le tag recommandé
+     * @param float  $confidence Niveau de confiance de la recommandation (0-100%)
+     * @param string $reason     Raison de la recommandation (pour le debug/UI)
      */
     public function __construct(
-        private Tag    $tag,
-        private float  $confidence,
-        private string $reason = ''
-    )
-    {
+        private Tag $tag,
+        private float $confidence,
+        private string $reason = '',
+    ) {
     }
 
     public function getTag(): Tag
@@ -35,7 +33,7 @@ readonly class TagRecommendation
 
     public function getConfidencePercentage(): int
     {
-        return (int)round($this->confidence);
+        return (int) round($this->confidence);
     }
 
     public function getReason(): string

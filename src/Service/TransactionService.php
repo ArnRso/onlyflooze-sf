@@ -7,8 +7,6 @@ use App\Entity\Tag;
 use App\Entity\Transaction;
 use App\Entity\User;
 use App\Repository\TransactionRepository;
-use DateMalformedStringException;
-use DateTimeImmutable;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\Query;
 use Ramsey\Uuid\Uuid;
@@ -17,9 +15,8 @@ readonly class TransactionService
 {
     public function __construct(
         private EntityManagerInterface $entityManager,
-        private TransactionRepository  $transactionRepository
-    )
-    {
+        private TransactionRepository $transactionRepository,
+    ) {
     }
 
     public function createTransaction(Transaction $transaction, User $user): Transaction
@@ -48,7 +45,7 @@ readonly class TransactionService
     /**
      * @return Transaction[]
      */
-    public function getUserTransactionsByDateRange(User $user, DateTimeImmutable $startDate, DateTimeImmutable $endDate): array
+    public function getUserTransactionsByDateRange(User $user, \DateTimeImmutable $startDate, \DateTimeImmutable $endDate): array
     {
         return $this->transactionRepository->findByUserAndDateRange($user, $startDate, $endDate);
     }
@@ -71,10 +68,10 @@ readonly class TransactionService
             $amount = $transaction->getAmountAsFloat();
             if ($amount >= 0) {
                 $positiveTotal += $amount;
-                $positiveCount++;
+                ++$positiveCount;
             } else {
                 $negativeTotal += $amount;
-                $negativeCount++;
+                ++$negativeCount;
             }
         }
 
@@ -187,7 +184,7 @@ readonly class TransactionService
             ->getQuery()
             ->getSingleScalarResult();
 
-        return (float)($result ?? 0);
+        return (float) ($result ?? 0);
     }
 
     /**
@@ -208,7 +205,7 @@ readonly class TransactionService
 
         $summary = [];
         foreach ($results as $result) {
-            $summary[$result['budgetMonth']] = (float)$result['total'];
+            $summary[$result['budgetMonth']] = (float) $result['total'];
         }
 
         return $summary;
@@ -216,8 +213,10 @@ readonly class TransactionService
 
     /**
      * @param array<string, mixed> $criteria
+     *
      * @return Query<mixed, Transaction>
-     * @throws DateMalformedStringException
+     *
+     * @throws \DateMalformedStringException
      */
     public function searchUserTransactions(User $user, array $criteria = []): Query
     {
@@ -231,7 +230,7 @@ readonly class TransactionService
 
         if (!empty($criteria['label'])) {
             $qb->andWhere('LOWER(t.label) LIKE LOWER(:label)')
-                ->setParameter('label', '%' . $criteria['label'] . '%');
+                ->setParameter('label', '%'.$criteria['label'].'%');
         }
 
         if (!empty($criteria['minAmount'])) {
@@ -246,12 +245,12 @@ readonly class TransactionService
 
         if (!empty($criteria['startDate'])) {
             $qb->andWhere('t.transactionDate >= :startDate')
-                ->setParameter('startDate', new DateTimeImmutable($criteria['startDate']));
+                ->setParameter('startDate', new \DateTimeImmutable($criteria['startDate']));
         }
 
         if (!empty($criteria['endDate'])) {
             $qb->andWhere('t.transactionDate <= :endDate')
-                ->setParameter('endDate', new DateTimeImmutable($criteria['endDate']));
+                ->setParameter('endDate', new \DateTimeImmutable($criteria['endDate']));
         }
 
         if (!empty($criteria['budgetMonth'])) {
@@ -300,7 +299,7 @@ readonly class TransactionService
     public function assignTransactionsToRecurring(array $transactionIds, RecurringTransaction $recurringTransaction): int
     {
         // Convertir les strings en UUID
-        $uuidTransactionIds = array_map(static fn($id) => Uuid::fromString($id), $transactionIds);
+        $uuidTransactionIds = array_map(static fn ($id) => Uuid::fromString($id), $transactionIds);
 
         $qb = $this->entityManager->createQueryBuilder()
             ->update(Transaction::class, 't')
@@ -319,12 +318,12 @@ readonly class TransactionService
 
     /**
      * @param string[] $transactionIds
-     * @param Tag[] $tags
+     * @param Tag[]    $tags
      */
     public function assignTagsToTransactions(array $transactionIds, array $tags): int
     {
         // Convertir les strings en UUID
-        $uuidTransactionIds = array_map(static fn($id) => Uuid::fromString($id), $transactionIds);
+        $uuidTransactionIds = array_map(static fn ($id) => Uuid::fromString($id), $transactionIds);
 
         // Récupérer les transactions
         $transactions = $this->entityManager->createQueryBuilder()

@@ -15,8 +15,6 @@ use App\Service\RecurringTransactionService;
 use App\Service\TagRecommendationService;
 use App\Service\TagService;
 use App\Service\TransactionService;
-use DateMalformedStringException;
-use Exception;
 use Knp\Component\Pager\PaginatorInterface;
 use Ramsey\Uuid\Uuid;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -30,20 +28,19 @@ use Symfony\Component\Security\Http\Attribute\IsGranted;
 class TransactionController extends AbstractController
 {
     public function __construct(
-        private readonly TransactionService                        $transactionService,
-        private readonly RecurringTransactionService               $recurringTransactionService,
-        private readonly PaginatorInterface                        $paginator,
-        private readonly RecurringTransactionRepository            $recurringTransactionRepository,
-        private readonly TagRepository                             $tagRepository,
-        private readonly TagService                                $tagService,
-        private readonly TagRecommendationService                  $tagRecommendationService,
-        private readonly RecurringTransactionRecommendationService $recurringTransactionRecommendationService
-    )
-    {
+        private readonly TransactionService $transactionService,
+        private readonly RecurringTransactionService $recurringTransactionService,
+        private readonly PaginatorInterface $paginator,
+        private readonly RecurringTransactionRepository $recurringTransactionRepository,
+        private readonly TagRepository $tagRepository,
+        private readonly TagService $tagService,
+        private readonly TagRecommendationService $tagRecommendationService,
+        private readonly RecurringTransactionRecommendationService $recurringTransactionRecommendationService,
+    ) {
     }
 
     /**
-     * @throws DateMalformedStringException
+     * @throws \DateMalformedStringException
      */
     #[Route('/', name: 'app_transaction_index', methods: ['GET'])]
     public function index(Request $request): Response
@@ -73,7 +70,7 @@ class TransactionController extends AbstractController
             'specificTag' => $request->query->get('specificTag', ''),
         ];
 
-        $searchCriteria = array_filter($searchCriteria, static fn($value) => $value !== '' && !empty($value));
+        $searchCriteria = array_filter($searchCriteria, static fn ($value) => $value !== '' && !empty($value));
 
         // Use search or regular query
         if (!empty($searchCriteria)) {
@@ -178,9 +175,11 @@ class TransactionController extends AbstractController
 
                 if ($nextTransaction) {
                     $this->addFlash('info', 'Redirection vers la prochaine transaction à traiter.');
+
                     return $this->redirectToRoute('app_transaction_edit', ['id' => $nextTransaction->getId()]);
                 } else {
                     $this->addFlash('success', 'Toutes les transactions ont été traitées !');
+
                     return $this->redirectToRoute('app_transaction_index');
                 }
             }
@@ -202,14 +201,13 @@ class TransactionController extends AbstractController
     {
         $this->denyAccessUnlessGranted(TransactionVoter::DELETE, $transaction);
 
-        if ($this->isCsrfTokenValid('delete' . $transaction->getId(), $request->getPayload()->getString('_token'))) {
+        if ($this->isCsrfTokenValid('delete'.$transaction->getId(), $request->getPayload()->getString('_token'))) {
             $this->transactionService->deleteTransaction($transaction);
             $this->addFlash('success', 'Transaction supprimée avec succès.');
         }
 
         return $this->redirectToRoute('app_transaction_index');
     }
-
 
     #[Route('/assign-recurring', name: 'app_transaction_assign_recurring', methods: ['POST'])]
     public function assignRecurring(Request $request): Response
@@ -218,6 +216,7 @@ class TransactionController extends AbstractController
         $token = $request->request->get('_token');
         if (!$this->isCsrfTokenValid('assign_recurring', is_string($token) ? $token : null)) {
             $this->addFlash('error', 'Token CSRF invalide.');
+
             return $this->redirectToRoute('app_transaction_index');
         }
 
@@ -229,21 +228,23 @@ class TransactionController extends AbstractController
 
         if (empty($transactionIds)) {
             $this->addFlash('error', 'Aucune transaction sélectionnée.');
+
             return $this->redirectToRoute('app_transaction_index');
         }
 
         try {
-
             if ($recurringTransactionId && $recurringTransactionId !== 'new') {
                 // Valider l'UUID
                 if (!is_string($recurringTransactionId) || !Uuid::isValid($recurringTransactionId)) {
                     $this->addFlash('error', 'Identifiant de transaction récurrente invalide.');
+
                     return $this->redirectToRoute('app_transaction_index');
                 }
 
                 $recurringTransaction = $this->recurringTransactionRepository->findByUserAndId($user, Uuid::fromString($recurringTransactionId));
                 if (!$recurringTransaction) {
                     $this->addFlash('error', 'Transaction récurrente introuvable.');
+
                     return $this->redirectToRoute('app_transaction_index');
                 }
             } elseif ($newRecurringName) {
@@ -252,6 +253,7 @@ class TransactionController extends AbstractController
                 $this->recurringTransactionService->createRecurringTransaction($recurringTransaction, $user);
             } else {
                 $this->addFlash('error', 'Veuillez sélectionner ou créer une transaction récurrente.');
+
                 return $this->redirectToRoute('app_transaction_index');
             }
 
@@ -259,6 +261,7 @@ class TransactionController extends AbstractController
             foreach ($transactionIds as $transactionId) {
                 if (!Uuid::isValid($transactionId)) {
                     $this->addFlash('error', 'Identifiant de transaction invalide.');
+
                     return $this->redirectToRoute('app_transaction_index');
                 }
             }
@@ -283,9 +286,8 @@ class TransactionController extends AbstractController
             if (!empty($searchParams)) {
                 return $this->redirectToRoute('app_transaction_index', $searchParams);
             }
-
-        } catch (Exception $e) {
-            $this->addFlash('error', 'Une erreur est survenue lors de l\'attribution : ' . $e->getMessage());
+        } catch (\Exception $e) {
+            $this->addFlash('error', 'Une erreur est survenue lors de l\'attribution : '.$e->getMessage());
         }
 
         return $this->redirectToRoute('app_transaction_index');
@@ -298,6 +300,7 @@ class TransactionController extends AbstractController
         $token = $request->request->get('_token');
         if (!$this->isCsrfTokenValid('assign_tags', is_string($token) ? $token : null)) {
             $this->addFlash('error', 'Token CSRF invalide.');
+
             return $this->redirectToRoute('app_transaction_index');
         }
 
@@ -309,11 +312,13 @@ class TransactionController extends AbstractController
 
         if (empty($transactionIds)) {
             $this->addFlash('error', 'Aucune transaction sélectionnée.');
+
             return $this->redirectToRoute('app_transaction_index');
         }
 
-        if (empty($existingTagIds) && empty(array_filter($newTags, static fn($tag) => !empty($tag['name'])))) {
+        if (empty($existingTagIds) && empty(array_filter($newTags, static fn ($tag) => !empty($tag['name'])))) {
             $this->addFlash('error', 'Aucun tag sélectionné ou créé.');
+
             return $this->redirectToRoute('app_transaction_index');
         }
 
@@ -322,6 +327,7 @@ class TransactionController extends AbstractController
             foreach ($transactionIds as $transactionId) {
                 if (!Uuid::isValid($transactionId)) {
                     $this->addFlash('error', 'Identifiant de transaction invalide.');
+
                     return $this->redirectToRoute('app_transaction_index');
                 }
             }
@@ -332,6 +338,7 @@ class TransactionController extends AbstractController
             foreach ($existingTagIds as $tagId) {
                 if (!Uuid::isValid($tagId)) {
                     $this->addFlash('error', 'Identifiant de tag invalide.');
+
                     return $this->redirectToRoute('app_transaction_index');
                 }
 
@@ -354,7 +361,7 @@ class TransactionController extends AbstractController
             $updatedCount = $this->transactionService->assignTagsToTransactions($transactionIds, $tags);
 
             // Ajouter le flash message
-            $tagNames = array_map(static fn($tag) => $tag->getName(), $tags);
+            $tagNames = array_map(static fn ($tag) => $tag->getName(), $tags);
             $this->addFlash('success', sprintf(
                 '%d transaction(s) mise(s) à jour avec les tags : %s',
                 $updatedCount,
@@ -372,12 +379,10 @@ class TransactionController extends AbstractController
             if (!empty($searchParams)) {
                 return $this->redirectToRoute('app_transaction_index', $searchParams);
             }
-
-        } catch (Exception $e) {
-            $this->addFlash('error', 'Une erreur est survenue lors de l\'attribution des tags : ' . $e->getMessage());
+        } catch (\Exception $e) {
+            $this->addFlash('error', 'Une erreur est survenue lors de l\'attribution des tags : '.$e->getMessage());
         }
 
         return $this->redirectToRoute('app_transaction_index');
     }
-
 }

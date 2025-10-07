@@ -69,33 +69,33 @@
                             <tbody>
                             {% for item in tags %}
                                 {% set tag = item[0] %}
-                                {% set transactionCount = item.transactionCount %}
-                                {% set currentMonth = item.currentMonth %}
-                                {% set previousMonth = item.previousMonth %}
+                                {% set transaction_count = item.transactionCount %}
+                                {% set current_month = item.currentMonth %}
+                                {% set previous_month = item.previousMonth %}
                                 <tr>
                                     <td>
                                         {% include 'components/tag.html.twig' with {'tag': tag} %}
                                     </td>
                                     <td class="text-center">
-                                        <span class="badge bg-secondary">{{ transactionCount }}</span>
+                                        <span class="badge bg-secondary">{{ transaction_count }}</span>
                                     </td>
                                     <td class="text-center">
-                                        {% if currentMonth.count > 0 %}
-                                            <div><span class="badge bg-primary">{{ currentMonth.count }}</span></div>
+                                        {% if current_month.count > 0 %}
+                                            <div><span class="badge bg-primary">{{ current_month.count }}</span></div>
                                             <div><small
-                                                    class="{% if currentMonth.total >= 0 %}text-success{% else %}text-danger{% endif %} fw-bold">
-                                                    {{ currentMonth.total|number_format(2, ',', ' ') }}&nbsp;€
+                                                    class="{% if current_month.total >= 0 %}text-success{% else %}text-danger{% endif %} fw-bold">
+                                                    {{ current_month.total|number_format(2, ',', ' ') }}&nbsp;€
                                                 </small></div>
                                         {% else %}
                                             <span class="text-muted">-</span>
                                         {% endif %}
                                     </td>
                                     <td class="text-center">
-                                        {% if previousMonth.count > 0 %}
-                                            <div><span class="badge bg-info">{{ previousMonth.count }}</span></div>
+                                        {% if previous_month.count > 0 %}
+                                            <div><span class="badge bg-info">{{ previous_month.count }}</span></div>
                                             <div><small
-                                                    class="{% if previousMonth.total >= 0 %}text-success{% else %}text-danger{% endif %} fw-bold">
-                                                    {{ previousMonth.total|number_format(2, ',', ' ') }}&nbsp;€
+                                                    class="{% if previous_month.total >= 0 %}text-success{% else %}text-danger{% endif %} fw-bold">
+                                                    {{ previous_month.total|number_format(2, ',', ' ') }}&nbsp;€
                                                 </small></div>
                                         {% else %}
                                             <span class="text-muted">-</span>
@@ -132,10 +132,10 @@
                                                     <div class="modal-body">
                                                         <p>Êtes-vous sûr de vouloir supprimer ce tag ?</p>
                                                         <p>{% include 'components/tag.html.twig' with {'tag': tag} %}</p>
-                                                        {% if transactionCount > 0 %}
+                                                        {% if transaction_count > 0 %}
                                                             <div class="alert alert-warning">
                                                                 <strong>Attention :</strong> Ce tag est utilisé
-                                                                dans {{ transactionCount }} transaction(s).
+                                                                dans {{ transaction_count }} transaction(s).
                                                                 Il sera retiré de toutes ces transactions.
                                                             </div>
                                                         {% endif %}

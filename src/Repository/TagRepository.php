@@ -57,7 +57,7 @@ class TagRepository extends ServiceEntityRepository
             ->andWhere('t.user = :user')
             ->andWhere('t.name LIKE :name')
             ->setParameter('user', $user)
-            ->setParameter('name', '%' . $name . '%')
+            ->setParameter('name', '%'.$name.'%')
             ->orderBy('t.name', 'ASC')
             ->getQuery()
             ->getResult();
@@ -72,7 +72,7 @@ class TagRepository extends ServiceEntityRepository
             ->getQuery()
             ->getSingleScalarResult();
 
-        return (int)$result;
+        return (int) $result;
     }
 
     /**
@@ -92,7 +92,8 @@ class TagRepository extends ServiceEntityRepository
     }
 
     /**
-     * Récupère les tags d'un utilisateur avec leurs transactions pré-chargées
+     * Récupère les tags d'un utilisateur avec leurs transactions pré-chargées.
+     *
      * @return Tag[]
      */
     public function findByUserWithTransactions(User $user): array

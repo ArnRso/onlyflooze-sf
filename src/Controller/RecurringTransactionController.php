@@ -7,7 +7,6 @@ use App\Entity\User;
 use App\Form\RecurringTransactionType;
 use App\Security\Voter\RecurringTransactionVoter;
 use App\Service\RecurringTransactionService;
-use DateMalformedStringException;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -19,9 +18,8 @@ use Symfony\Component\Security\Http\Attribute\IsGranted;
 class RecurringTransactionController extends AbstractController
 {
     public function __construct(
-        private readonly RecurringTransactionService $recurringTransactionService
-    )
-    {
+        private readonly RecurringTransactionService $recurringTransactionService,
+    ) {
     }
 
     #[Route('/', name: 'app_recurring_transaction_index', methods: ['GET'])]
@@ -39,7 +37,7 @@ class RecurringTransactionController extends AbstractController
     }
 
     /**
-     * @throws DateMalformedStringException
+     * @throws \DateMalformedStringException
      */
     #[Route('/monthly-recap', name: 'app_recurring_transaction_monthly_recap', methods: ['GET'])]
     public function monthlyRecap(Request $request): Response
@@ -137,7 +135,7 @@ class RecurringTransactionController extends AbstractController
     {
         $this->denyAccessUnlessGranted(RecurringTransactionVoter::DELETE, $recurringTransaction);
 
-        if ($this->isCsrfTokenValid('delete' . $recurringTransaction->getId(), $request->getPayload()->getString('_token'))) {
+        if ($this->isCsrfTokenValid('delete'.$recurringTransaction->getId(), $request->getPayload()->getString('_token'))) {
             $this->recurringTransactionService->deleteRecurringTransaction($recurringTransaction);
             $this->addFlash('success', 'Transaction récurrente supprimée avec succès.');
         }
