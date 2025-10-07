@@ -347,4 +347,29 @@ readonly class TransactionService
 
         return count($transactions);
     }
+
+    /**
+     * Trouve la prochaine transaction de l'utilisateur qui n'a ni tags ni transaction récurrente.
+     * Exclut la transaction spécifiée.
+     */
+    public function findNextUntaggedTransaction(User $user, ?Transaction $currentTransaction = null): ?Transaction
+    {
+        $qb = $this->entityManager->createQueryBuilder();
+        $qb->select('t')
+            ->from(Transaction::class, 't')
+            ->where('t.user = :user')
+            ->andWhere('SIZE(t.tags) = 0')
+            ->andWhere('t.recurringTransaction IS NULL')
+            ->setParameter('user', $user)
+            ->orderBy('t.transactionDate', 'DESC')
+            ->addOrderBy('t.createdAt', 'DESC')
+            ->setMaxResults(1);
+
+        if ($currentTransaction) {
+            $qb->andWhere('t.id != :currentId')
+                ->setParameter('currentId', $currentTransaction->getId());
+        }
+
+        return $qb->getQuery()->getOneOrNullResult();
+    }
 }
