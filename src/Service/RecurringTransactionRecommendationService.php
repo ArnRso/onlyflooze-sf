@@ -179,7 +179,7 @@ class RecurringTransactionRecommendationService
 
                 // Hydrater l'entité RecurringTransaction
                 $recurringTransaction = $this->entityManager->find(RecurringTransaction::class, $rtId);
-                if (!$recurringTransaction) {
+                if (!$recurringTransaction || !$recurringTransaction->getId()) {
                     continue;
                 }
 
@@ -221,6 +221,9 @@ class RecurringTransactionRecommendationService
 
         // Séparer par espaces et caractères spéciaux
         $words = preg_split('/[\s\-_\/]+/', $label);
+        if ($words === false) {
+            return [];
+        }
 
         // Filtrer les mots courts et les mots communs
         $stopWords = ['CARTE', 'VIR', 'PRLV', 'DE', 'DU', 'LA', 'LE', 'LES', 'UN', 'UNE', 'INST', 'VERS', 'ECH', 'PRET'];
@@ -243,7 +246,11 @@ class RecurringTransactionRecommendationService
     private function calculateKeywordConfidence(string $keyword, RecurringTransaction $recurringTransaction): float
     {
         $keywordUpper = mb_strtoupper($keyword);
-        $rtNameUpper = mb_strtoupper($recurringTransaction->getName());
+        $rtName = $recurringTransaction->getName();
+        if ($rtName === null) {
+            return self::CONFIDENCE_KEYWORD_WEAK;
+        }
+        $rtNameUpper = mb_strtoupper($rtName);
 
         // Si le nom de la transaction récurrente correspond exactement au mot-clé → confiance forte
         if ($rtNameUpper === $keywordUpper) {
@@ -371,7 +378,11 @@ class RecurringTransactionRecommendationService
         $merged = [];
 
         foreach ($recommendations as $recommendation) {
-            $rtId = $recommendation->getRecurringTransaction()->getId()->toString();
+            $id = $recommendation->getRecurringTransaction()->getId();
+            if ($id === null) {
+                continue;
+            }
+            $rtId = $id->toString();
 
             if (!isset($merged[$rtId]) || $merged[$rtId]->getConfidence() < $recommendation->getConfidence()) {
                 $merged[$rtId] = $recommendation;
@@ -390,7 +401,7 @@ class RecurringTransactionRecommendationService
     private function excludeExisting(array $recommendations, Transaction $transaction): array
     {
         $existingRt = $transaction->getRecurringTransaction();
-        if (!$existingRt) {
+        if (!$existingRt || !$existingRt->getId()) {
             return $recommendations;
         }
 
@@ -398,7 +409,10 @@ class RecurringTransactionRecommendationService
 
         return array_filter(
             $recommendations,
-            static fn(RecurringTransactionRecommendation $rec) => $rec->getRecurringTransaction()->getId()->toString() !== $existingRtId
+            static function (RecurringTransactionRecommendation $rec) use ($existingRtId) {
+                $recId = $rec->getRecurringTransaction()->getId();
+                return $recId === null || $recId->toString() !== $existingRtId;
+            }
         );
     }
 }

@@ -108,14 +108,16 @@ class TagRecommendationService
 
         $tagCounts = [];
         foreach ($results as $similarTransaction) {
-            if ($similarTransaction instanceof Transaction) {
-                foreach ($similarTransaction->getTags() as $tag) {
-                    $tagId = $tag->getId()->toString();
-                    if (!isset($tagCounts[$tagId])) {
-                        $tagCounts[$tagId] = ['tag' => $tag, 'count' => 0];
-                    }
-                    $tagCounts[$tagId]['count']++;
+            foreach ($similarTransaction->getTags() as $tag) {
+                $tagIdObj = $tag->getId();
+                if ($tagIdObj === null) {
+                    continue;
                 }
+                $tagId = $tagIdObj->toString();
+                if (!isset($tagCounts[$tagId])) {
+                    $tagCounts[$tagId] = ['tag' => $tag, 'count' => 0];
+                }
+                $tagCounts[$tagId]['count']++;
             }
         }
 
@@ -168,17 +170,15 @@ class TagRecommendationService
             $results = $qb->getQuery()->getResult();
 
             foreach ($results as $similarTransaction) {
-                if ($similarTransaction instanceof Transaction) {
-                    foreach ($similarTransaction->getTags() as $tag) {
-                        // Calculer la confiance basée sur la similarité
-                        $confidence = $this->calculateKeywordConfidence($keyword, $tag);
+                foreach ($similarTransaction->getTags() as $tag) {
+                    // Calculer la confiance basée sur la similarité
+                    $confidence = $this->calculateKeywordConfidence($keyword, $tag);
 
-                        $recommendations[] = new TagRecommendation(
-                            $tag,
-                            $confidence,
-                            sprintf('Mot-clé : "%s"', $keyword)
-                        );
-                    }
+                    $recommendations[] = new TagRecommendation(
+                        $tag,
+                        $confidence,
+                        sprintf('Mot-clé : "%s"', $keyword)
+                    );
                 }
             }
         }
@@ -198,6 +198,9 @@ class TagRecommendationService
 
         // Séparer par espaces et caractères spéciaux
         $words = preg_split('/[\s\-_\/]+/', $label);
+        if ($words === false) {
+            return [];
+        }
 
         // Filtrer les mots courts et les mots communs
         $stopWords = ['CARTE', 'VIR', 'PRLV', 'DE', 'DU', 'LA', 'LE', 'LES', 'UN', 'UNE', 'INST', 'VERS'];
@@ -220,7 +223,11 @@ class TagRecommendationService
     private function calculateKeywordConfidence(string $keyword, Tag $tag): float
     {
         $keywordUpper = mb_strtoupper($keyword);
-        $tagNameUpper = mb_strtoupper($tag->getName());
+        $tagName = $tag->getName();
+        if ($tagName === null) {
+            return self::CONFIDENCE_KEYWORD_WEAK;
+        }
+        $tagNameUpper = mb_strtoupper($tagName);
 
         // Si le tag correspond exactement au mot-clé → confiance forte
         if ($tagNameUpper === $keywordUpper) {
@@ -370,7 +377,11 @@ class TagRecommendationService
         $merged = [];
 
         foreach ($recommendations as $recommendation) {
-            $tagId = $recommendation->getTag()->getId()->toString();
+            $id = $recommendation->getTag()->getId();
+            if ($id === null) {
+                continue;
+            }
+            $tagId = $id->toString();
 
             if (!isset($merged[$tagId]) || $merged[$tagId]->getConfidence() < $recommendation->getConfidence()) {
                 $merged[$tagId] = $recommendation;
@@ -390,12 +401,18 @@ class TagRecommendationService
     {
         $existingTagIds = [];
         foreach ($transaction->getTags() as $tag) {
-            $existingTagIds[] = $tag->getId()->toString();
+            $id = $tag->getId();
+            if ($id !== null) {
+                $existingTagIds[] = $id->toString();
+            }
         }
 
         return array_filter(
             $recommendations,
-            static fn(TagRecommendation $rec) => !in_array($rec->getTag()->getId()->toString(), $existingTagIds, true)
+            static function (TagRecommendation $rec) use ($existingTagIds) {
+                $recId = $rec->getTag()->getId();
+                return $recId === null || !in_array($recId->toString(), $existingTagIds, true);
+            }
         );
     }
 }
