@@ -170,6 +170,21 @@ class TransactionController extends AbstractController
 
             $this->addFlash('success', 'Transaction modifiée avec succès.');
 
+            // Gérer la redirection selon le bouton cliqué
+            $action = $request->request->get('action');
+            if ($action === 'save_and_next') {
+                // Trouver la prochaine transaction non taggée
+                $nextTransaction = $this->transactionService->findNextUntaggedTransaction($user, $transaction);
+
+                if ($nextTransaction) {
+                    $this->addFlash('info', 'Redirection vers la prochaine transaction à traiter.');
+                    return $this->redirectToRoute('app_transaction_edit', ['id' => $nextTransaction->getId()]);
+                } else {
+                    $this->addFlash('success', 'Toutes les transactions ont été traitées !');
+                    return $this->redirectToRoute('app_transaction_index');
+                }
+            }
+
             return $this->redirectToRoute('app_transaction_index');
         }
 
