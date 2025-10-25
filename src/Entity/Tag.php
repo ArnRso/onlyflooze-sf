@@ -36,6 +36,7 @@ class Tag
      * @var Collection<int, Transaction>
      */
     #[ORM\ManyToMany(targetEntity: Transaction::class, mappedBy: 'tags')]
+    #[ORM\OrderBy(['transactionDate' => 'DESC'])]
     private Collection $transactions;
 
     public function __construct()
