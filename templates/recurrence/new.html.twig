@@ -1,0 +1,24 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Nouvelle récurrence — OnlyFlooze{% endblock %}
+
+{% block body %}
+    <h1 class="h3 mb-4">Nouvelle récurrence</h1>
+
+    <div class="card">
+        <div class="card-body">
+            {{ form_start(form) }}
+                {{ form_row(form.name) }}
+                {{ form_row(form.direction) }}
+                {{ form_row(form.expectedDayOfMonth) }}
+                {{ form_row(form.expectedAmountCents) }}
+                {{ form_row(form.tolerancePct) }}
+                {{ form_row(form.dayWindow) }}
+                {{ form_row(form.category) }}
+                {{ form_row(form.active) }}
+                <button type="submit" class="btn btn-primary">Créer</button>
+                <a class="btn btn-outline-secondary" href="{{ path('app_recurrences') }}">Annuler</a>
+            {{ form_end(form) }}
+        </div>
+    </div>
+{% endblock %}

@@ -2,122 +2,271 @@
 
 namespace App\Entity;
 
-use App\Entity\Trait\TimestampableTrait;
+use App\Enum\CategorySource;
+use App\Enum\Direction;
+use App\Enum\TransactionNature;
+use App\Enum\TransactionType;
 use App\Repository\TransactionRepository;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
-use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
-use Ramsey\Uuid\Doctrine\UuidGenerator;
-use Ramsey\Uuid\UuidInterface;
+use Symfony\Bridge\Doctrine\Types\UuidType;
+use Symfony\Component\Uid\Uuid;
 
+/**
+ * Une ligne du relevé bancaire.
+ *
+ * Le montant est signé, en centimes (négatif = débit). "dedupKey" sert au
+ * dédoublonnage par comptage d'occurrences : ce n'est PAS une clé unique,
+ * des doublons légitimes existent.
+ */
 #[ORM\Entity(repositoryClass: TransactionRepository::class)]
-#[ORM\HasLifecycleCallbacks]
-#[ORM\UniqueConstraint(name: 'unique_transaction_per_user', columns: ['user_id', 'transaction_date', 'amount', 'label'])]
+#[ORM\Table(name: 'bank_transaction')]
+#[ORM\Index(name: 'idx_transaction_dedup_key', columns: ['dedup_key'])]
+#[ORM\Index(name: 'idx_transaction_operation_date', columns: ['operation_date'])]
+#[ORM\Index(name: 'idx_transaction_category_source', columns: ['category_source'])]
 class Transaction
 {
-    use TimestampableTrait;
-
     #[ORM\Id]
-    #[ORM\Column(type: 'uuid', unique: true)]
-    #[ORM\GeneratedValue(strategy: 'CUSTOM')]
-    #[ORM\CustomIdGenerator(class: UuidGenerator::class)]
-    private ?UuidInterface $id = null;
-    #[ORM\Column(length: 255)]
-    private ?string $label = null;
-    #[ORM\Column(type: Types::DATE_IMMUTABLE)]
-    private ?\DateTimeImmutable $transactionDate = null;
-    #[ORM\Column(type: Types::DECIMAL, precision: 10, scale: 2)]
-    private ?string $amount = null;
-    #[ORM\Column(type: Types::TEXT, nullable: true)]
-    private ?string $info = null;
-    #[ORM\ManyToOne(inversedBy: 'transactions')]
-    #[ORM\JoinColumn(nullable: false)]
-    private ?User $user = null;
-    /**
-     * @var Collection<int, Tag>
-     */
-    #[ORM\ManyToMany(targetEntity: Tag::class, inversedBy: 'transactions')]
-    #[ORM\JoinTable(name: 'transaction_tag')]
+    #[ORM\Column(type: UuidType::NAME)]
+    private Uuid $id;
+
+    #[ORM\Column(type: 'date_immutable')]
+    private \DateTimeImmutable $operationDate;
+
+    #[ORM\Column(type: 'date_immutable')]
+    private \DateTimeImmutable $valueDate;
+
+    #[ORM\Column(type: 'text')]
+    private string $label;
+
+    #[ORM\Column]
+    private int $amountCents;
+
+    #[ORM\Column(enumType: TransactionType::class)]
+    private TransactionType $type;
+
+    /** @var list<string> */
+    #[ORM\Column(type: 'json')]
+    private array $tokens = [];
+
+    #[ORM\Column(type: 'date_immutable', nullable: true)]
+    private ?\DateTimeImmutable $purchaseDate = null;
+
+    #[ORM\Column(enumType: TransactionNature::class)]
+    private TransactionNature $nature;
+
+    #[ORM\ManyToOne]
+    #[ORM\JoinColumn(onDelete: 'SET NULL')]
+    private ?Category $category = null;
+
+    #[ORM\ManyToOne]
+    #[ORM\JoinColumn(onDelete: 'SET NULL')]
+    private ?Category $suggestedCategory = null;
+
+    #[ORM\Column(enumType: CategorySource::class)]
+    private CategorySource $categorySource = CategorySource::Unclassified;
+
+    #[ORM\ManyToOne]
+    #[ORM\JoinColumn(onDelete: 'SET NULL')]
+    private ?CategorizationRule $matchedRule = null;
+
+    #[ORM\ManyToOne]
+    #[ORM\JoinColumn(onDelete: 'SET NULL')]
+    private ?Recurrence $recurrence = null;
+
+    #[ORM\Column]
+    private bool $amountOutOfTolerance = false;
+
+    /** @var Collection<int, Tag> */
+    #[ORM\ManyToMany(targetEntity: Tag::class)]
+    #[ORM\JoinTable(name: 'bank_transaction_tag')]
     private Collection $tags;
 
-    #[ORM\Column(length: 7, nullable: true)]
-    private ?string $budgetMonth = null;
+    #[ORM\Column(length: 40)]
+    private string $dedupKey;
 
-    #[ORM\ManyToOne(inversedBy: 'transactions')]
-    private ?RecurringTransaction $recurringTransaction = null;
+    #[ORM\ManyToOne]
+    #[ORM\JoinColumn(onDelete: 'SET NULL')]
+    private ?ImportBatch $importBatch = null;
 
-    public function __construct()
-    {
+    #[ORM\Column]
+    private \DateTimeImmutable $createdAt;
+
+    public function __construct(
+        \DateTimeImmutable $operationDate,
+        \DateTimeImmutable $valueDate,
+        string $label,
+        int $amountCents,
+        TransactionType $type,
+    ) {
+        $this->id = Uuid::v7();
+        $this->operationDate = $operationDate;
+        $this->valueDate = $valueDate;
+        $this->label = $label;
+        $this->amountCents = $amountCents;
+        $this->type = $type;
+        $this->nature = TransactionNature::defaultForAmountCents($amountCents);
+        $this->dedupKey = self::computeDedupKey($operationDate, $label, $amountCents);
         $this->tags = new ArrayCollection();
+        $this->createdAt = new \DateTimeImmutable();
     }
 
-    public function getId(): ?UuidInterface
+    public static function computeDedupKey(\DateTimeImmutable $operationDate, string $label, int $amountCents): string
+    {
+        return sha1($operationDate->format('Y-m-d').'|'.trim($label).'|'.$amountCents);
+    }
+
+    public function getId(): Uuid
     {
         return $this->id;
     }
 
-    public function getLabel(): ?string
+    public function getOperationDate(): \DateTimeImmutable
+    {
+        return $this->operationDate;
+    }
+
+    public function getValueDate(): \DateTimeImmutable
+    {
+        return $this->valueDate;
+    }
+
+    public function getLabel(): string
     {
         return $this->label;
     }
 
-    public function setLabel(string $label): static
+    public function getAmountCents(): int
     {
-        $this->label = $label;
+        return $this->amountCents;
+    }
+
+    public function getDirection(): Direction
+    {
+        return Direction::fromAmountCents($this->amountCents);
+    }
+
+    public function getType(): TransactionType
+    {
+        return $this->type;
+    }
+
+    /**
+     * @return list<string>
+     */
+    public function getTokens(): array
+    {
+        return $this->tokens;
+    }
+
+    /**
+     * @param list<string> $tokens
+     */
+    public function setTokens(array $tokens): static
+    {
+        $this->tokens = $tokens;
 
         return $this;
     }
 
-    public function getTransactionDate(): ?\DateTimeImmutable
+    public function getPurchaseDate(): ?\DateTimeImmutable
     {
-        return $this->transactionDate;
+        return $this->purchaseDate;
     }
 
-    public function setTransactionDate(\DateTimeImmutable $transactionDate): static
+    public function setPurchaseDate(?\DateTimeImmutable $purchaseDate): static
     {
-        $this->transactionDate = $transactionDate;
+        $this->purchaseDate = $purchaseDate;
 
         return $this;
     }
 
-    public function getAmount(): ?string
+    public function getNature(): TransactionNature
     {
-        return $this->amount;
+        return $this->nature;
     }
 
-    public function setAmount(string $amount): static
+    public function setNature(TransactionNature $nature): static
     {
-        $this->amount = $amount;
+        $this->nature = $nature;
 
         return $this;
     }
 
-    public function getAmountAsFloat(): float
+    public function getCategory(): ?Category
     {
-        return (float) $this->amount;
+        return $this->category;
     }
 
-    public function getInfo(): ?string
+    public function setCategory(?Category $category): static
     {
-        return $this->info;
-    }
-
-    public function setInfo(?string $info): static
-    {
-        $this->info = $info;
+        $this->category = $category;
 
         return $this;
     }
 
-    public function getUser(): ?User
+    public function getSuggestedCategory(): ?Category
     {
-        return $this->user;
+        return $this->suggestedCategory;
     }
 
-    public function setUser(?User $user): static
+    public function setSuggestedCategory(?Category $suggestedCategory): static
     {
-        $this->user = $user;
+        $this->suggestedCategory = $suggestedCategory;
+
+        return $this;
+    }
+
+    public function getCategorySource(): CategorySource
+    {
+        return $this->categorySource;
+    }
+
+    public function setCategorySource(CategorySource $categorySource): static
+    {
+        $this->categorySource = $categorySource;
+
+        return $this;
+    }
+
+    public function isToReview(): bool
+    {
+        return $this->categorySource === CategorySource::Unclassified;
+    }
+
+    public function getMatchedRule(): ?CategorizationRule
+    {
+        return $this->matchedRule;
+    }
+
+    public function setMatchedRule(?CategorizationRule $matchedRule): static
+    {
+        $this->matchedRule = $matchedRule;
+
+        return $this;
+    }
+
+    public function getRecurrence(): ?Recurrence
+    {
+        return $this->recurrence;
+    }
+
+    public function setRecurrence(?Recurrence $recurrence): static
+    {
+        $this->recurrence = $recurrence;
+
+        return $this;
+    }
+
+    public function isAmountOutOfTolerance(): bool
+    {
+        return $this->amountOutOfTolerance;
+    }
+
+    public function setAmountOutOfTolerance(bool $amountOutOfTolerance): static
+    {
+        $this->amountOutOfTolerance = $amountOutOfTolerance;
 
         return $this;
     }
@@ -146,27 +295,25 @@ class Transaction
         return $this;
     }
 
-    public function getBudgetMonth(): ?string
+    public function getDedupKey(): string
     {
-        return $this->budgetMonth;
+        return $this->dedupKey;
     }
 
-    public function setBudgetMonth(?string $budgetMonth): static
+    public function getImportBatch(): ?ImportBatch
     {
-        $this->budgetMonth = $budgetMonth;
+        return $this->importBatch;
+    }
+
+    public function setImportBatch(?ImportBatch $importBatch): static
+    {
+        $this->importBatch = $importBatch;
 
         return $this;
     }
 
-    public function getRecurringTransaction(): ?RecurringTransaction
+    public function getCreatedAt(): \DateTimeImmutable
     {
-        return $this->recurringTransaction;
-    }
-
-    public function setRecurringTransaction(?RecurringTransaction $recurringTransaction): static
-    {
-        $this->recurringTransaction = $recurringTransaction;
-
-        return $this;
+        return $this->createdAt;
     }
 }

@@ -1,0 +1,43 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Catégories — OnlyFlooze{% endblock %}
+
+{% block body %}
+    <div class="d-flex align-items-center justify-content-between mb-4">
+        <h1 class="h3 mb-0">Catégories</h1>
+        <a class="btn btn-primary btn-sm" href="{{ path('app_category_new') }}">Nouvelle catégorie</a>
+    </div>
+
+    <div class="card">
+        <table class="table table-sm align-middle mb-0">
+            <tbody>
+                {% for root in rootCategories %}
+                    <tr>
+                        <td class="ps-3"><strong>{{ root.name }}</strong></td>
+                        <td class="text-end pe-3">
+                            <a class="btn btn-sm btn-outline-secondary" href="{{ path('app_category_edit', {id: root.id}) }}">Renommer</a>
+                            <form method="post" action="{{ path('app_category_delete', {id: root.id}) }}" class="d-inline" data-turbo-confirm="Supprimer « {{ root.name }} » ? Ses transactions repasseront à trier.">
+                                <input type="hidden" name="_token" value="{{ csrf_token('delete' ~ root.id) }}">
+                                <button type="submit" class="btn btn-sm btn-outline-danger">Supprimer</button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% for child in root.children %}
+                        <tr>
+                            <td class="ps-5">└ {{ child.name }}</td>
+                            <td class="text-end pe-3">
+                                <a class="btn btn-sm btn-outline-secondary" href="{{ path('app_category_edit', {id: child.id}) }}">Renommer</a>
+                                <form method="post" action="{{ path('app_category_delete', {id: child.id}) }}" class="d-inline" data-turbo-confirm="Supprimer « {{ child.name }} » ?">
+                                    <input type="hidden" name="_token" value="{{ csrf_token('delete' ~ child.id) }}">
+                                    <button type="submit" class="btn btn-sm btn-outline-danger">Supprimer</button>
+                                </form>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                {% else %}
+                    <tr><td class="text-center text-muted py-4">Aucune catégorie. Commence par créer tes postes de budget.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+{% endblock %}

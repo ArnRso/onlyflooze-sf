@@ -19,10 +19,28 @@ permissions:
   id-token: write
 
 jobs:
-  # Job 1: Analyse statique
+  # Job 1: Analyse statique + tests
   test:
-    name: PHPStan Analysis
+    name: Tests & Static Analysis
     runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: app
+          POSTGRES_USER: app
+          POSTGRES_PASSWORD: test_password
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U app"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      DATABASE_URL: "postgresql://app:test_password@127.0.0.1:5432/app?serverVersion=16&charset=utf8"
 
     steps:
       - name: Checkout code
@@ -31,8 +49,8 @@ jobs:
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
         with:
-          php-version: '8.3'
-          extensions: pdo, pdo_pgsql, pgsql, intl, zip, gd, exif
+          php-version: '8.4'
+          extensions: pdo, pdo_pgsql, pgsql, intl, zip
           coverage: none
 
       - name: Get Composer cache directory
@@ -49,13 +67,27 @@ jobs:
       - name: Install Composer dependencies
         run: composer install --prefer-dist --no-progress --no-scripts
 
-      - name: Setup Symfony environment and warm cache
+      - name: Warm dev cache (for PHPStan)
         run: |
           cp .env .env.local
           php bin/console cache:warmup --env=dev
 
       - name: Run PHPStan
         run: make phpstan
+
+      - name: Check PHP code style
+        run: make php-cs-fixer
+
+      - name: Check Twig code style
+        run: make twigcs
+
+      - name: Prepare test database
+        run: |
+          php bin/console doctrine:database:create --env=test --if-not-exists
+          php bin/console doctrine:migrations:migrate --env=test --no-interaction
+
+      - name: Run PHPUnit
+        run: make test
 
   # Job 2: Build et push des images Docker
   build-and-push:
@@ -96,48 +128,6 @@ jobs:
         with:
           context: .
           platforms: linux/amd64
-          push: true
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-
-  # Job optionnel: Build multi-plateforme (ARM64 + AMD64) - seulement sur release
-  build-multiplatform:
-    name: Build Multi-platform Images
-    runs-on: ubuntu-latest
-    needs: test
-    if: github.event_name == 'release'
-    
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Login to Docker Hub
-        uses: docker/login-action@v3
-        with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
-
-      - name: Extract metadata
-        id: meta
-        uses: docker/metadata-action@v5
-        with:
-          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
-          tags: |
-            type=semver,pattern={{version}}
-            type=semver,pattern={{major}}.{{minor}}
-            type=raw,value=latest-multiplatform
-
-      - name: Build and push multi-platform Docker image
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          platforms: linux/amd64,linux/arm64
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}

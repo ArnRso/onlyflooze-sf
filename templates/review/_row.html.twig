@@ -1,0 +1,34 @@
+<tr id="review-row-{{ transaction.id }}">
+    <td class="ps-3 text-nowrap">{{ transaction.operationDate|date('d/m/Y') }}</td>
+    <td>
+        {{ transaction.label }}
+        {% if transaction.suggestedCategory %}
+            <br><small class="text-primary">Suggestion : {{ transaction.suggestedCategory.fullName }}</small>
+        {% endif %}
+    </td>
+    <td class="text-end text-nowrap {{ transaction.amountCents < 0 ? 'text-danger' : 'text-success' }}">
+        {{ transaction.amountCents|money(true) }}
+    </td>
+    <td>
+        <form method="post" action="{{ path('app_review_categorize', {id: transaction.id}) }}" class="d-flex gap-2">
+            <input type="hidden" name="_token" value="{{ csrf_token('categorize' ~ transaction.id) }}">
+            <select name="category" class="form-select form-select-sm" aria-label="Catégorie">
+                {% if transaction.suggestedCategory is null %}
+                    <option value="" selected disabled>— Choisir —</option>
+                {% endif %}
+                {% for category in categories %}
+                    <option value="{{ category.id }}" {{ transaction.suggestedCategory and transaction.suggestedCategory.id == category.id ? 'selected' }}>
+                        {{ category.fullName }}
+                    </option>
+                {% endfor %}
+            </select>
+            {% set preselectedNature = transaction.matchedRule and transaction.matchedRule.nature ? transaction.matchedRule.nature : transaction.nature %}
+            <select name="nature" class="form-select form-select-sm w-auto" aria-label="Nature">
+                {% for nature in enum_cases('App\\Enum\\TransactionNature') %}
+                    <option value="{{ nature.value }}" {{ preselectedNature == nature ? 'selected' }}>{{ nature.label }}</option>
+                {% endfor %}
+            </select>
+            <button type="submit" class="btn btn-sm btn-primary" title="Valider">✓</button>
+        </form>
+    </td>
+</tr>

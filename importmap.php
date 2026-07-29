@@ -10,69 +10,28 @@
  *     be used as an "entrypoint" (and passed to the importmap() Twig function).
  *
  * The "importmap:require" command can be used to add new entries to this file.
+ *
+ * @return array<string, array{    // Import name as key, description of the imported file as value
+ *     path: string,               // Logical, relative or absolute path to the file
+ *     type?: 'js'|'css'|'json',   // Type of the file, defaults to 'js'
+ *     entrypoint?: bool,          // Whether the file is an entrypoint, for 'js' only
+ * }|array{
+ *     version: string,            // Version of the remote package
+ *     package_specifier?: string, // Remote "package-name/path" specifier, defaults to the import name
+ *     type?: 'js'|'css'|'json',
+ *     entrypoint?: bool,
+ * }>
  */
 return [
-    'app' => [
-        'path' => './assets/app.js',
-        'entrypoint' => true,
-    ],
-    'csv-import' => [
-        'path' => './assets/csv-import.js',
-        'entrypoint' => true,
-    ],
-    'transaction-pagination' => [
-        'path' => './assets/transaction-pagination.js',
-        'entrypoint' => true,
-    ],
-    'csv-upload' => [
-        'path' => './assets/csv-upload.js',
-        'entrypoint' => true,
-    ],
-    'csv-preview' => [
-        'path' => './assets/csv-preview.js',
-        'entrypoint' => true,
-    ],
-    'transaction-management' => [
-        'path' => './assets/transaction-management.js',
-        'entrypoint' => true,
-    ],
-    'transaction-edit-tags' => [
-        'path' => './assets/transaction-edit-tags.js',
-        'entrypoint' => true,
-    ],
-    'js/tag-manager.js' => [
-        'path' => './assets/js/tag-manager.js',
-        'entrypoint' => false,
-    ],
-    'bootstrap' => [
-        'version' => '5.3.7',
-    ],
-    '@popperjs/core' => [
-        'version' => '2.11.8',
-    ],
-    'bootstrap/dist/css/bootstrap.min.css' => [
-        'version' => '5.3.7',
-        'type' => 'css',
-    ],
-    '@fortawesome/fontawesome-free' => [
-        'version' => '7.0.0',
-    ],
-    '@fortawesome/fontawesome-free/css/fontawesome.min.css' => [
-        'version' => '7.0.0',
-        'type' => 'css',
-    ],
-    '@fortawesome/fontawesome-free/css/solid.min.css' => [
-        'version' => '7.0.0',
-        'type' => 'css',
-    ],
-    'chart.js' => [
-        'version' => '4.5.0',
-    ],
-    '@kurkle/color' => [
-        'version' => '0.3.4',
-    ],
-    'js/recurring-transactions-chart.js' => [
-        'path' => './assets/js/recurring-transactions-chart.js',
-        'entrypoint' => true,
-    ],
+    'app' => ['path' => './assets/app.js', 'entrypoint' => true],
+    '@symfony/stimulus-bundle' => ['path' => '@symfony/stimulus-bundle/loader.js'],
+    '@hotwired/turbo' => ['version' => '8.0.23'],
+    'bootstrap' => ['version' => '5.3.8'],
+    'bootstrap/dist/css/bootstrap.min.css' => ['version' => '5.3.8', 'type' => 'css'],
+    '@fortawesome/fontawesome-free/css/fontawesome.min.css' => ['version' => '7.3.1', 'type' => 'css'],
+    '@fortawesome/fontawesome-free/css/solid.min.css' => ['version' => '7.3.1', 'type' => 'css'],
+    'chart.js' => ['version' => '4.5.1'],
+    '@popperjs/core' => ['version' => '2.11.8'],
+    '@kurkle/color' => ['version' => '0.3.4'],
+    '@hotwired/stimulus' => ['version' => '3.2.2'],
 ];

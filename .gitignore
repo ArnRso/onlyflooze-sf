@@ -34,3 +34,7 @@
 /node_modules/
 /package-lock.json
 ###< eslint ###
+
+###> vincentlanglet/twig-cs-fixer ###
+/.twig-cs-fixer.cache
+###< vincentlanglet/twig-cs-fixer ###

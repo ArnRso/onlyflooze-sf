@@ -1,0 +1,40 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}À trier — OnlyFlooze{% endblock %}
+
+{% block body %}
+    <div class="d-flex align-items-center justify-content-between mb-4">
+        <h1 class="h3 mb-0">File de révision</h1>
+        <div class="d-flex align-items-center gap-3">
+            <form method="post" action="{{ path('app_review_reapply') }}">
+                <input type="hidden" name="_token" value="{{ csrf_token('reapply') }}">
+                <button type="submit" class="btn btn-sm btn-outline-primary" title="Re-matche les règles apprises sur tout le stock à trier">
+                    Réappliquer les règles
+                </button>
+            </form>
+            <span class="fs-5">Reste <span id="review-count" class="badge text-bg-danger">{{ toReviewCount }}</span></span>
+        </div>
+    </div>
+
+    {% if categories is empty %}
+        <div class="alert alert-info">
+            Crée d'abord quelques <a href="{{ path('app_categories') }}">catégories</a> pour pouvoir trier.
+        </div>
+    {% else %}
+        <div class="card">
+            <table class="table table-hover align-middle mb-0">
+                <thead>
+                    <tr>
+                        <th class="ps-3">Date</th>
+                        <th>Libellé</th>
+                        <th class="text-end">Montant</th>
+                        <th style="width: 40%;">Catégorie</th>
+                    </tr>
+                </thead>
+                <tbody id="review-list">
+                    {{ include('review/_list.html.twig') }}
+                </tbody>
+            </table>
+        </div>
+    {% endif %}
+{% endblock %}
