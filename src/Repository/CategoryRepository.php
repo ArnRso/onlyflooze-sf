@@ -29,6 +29,9 @@ class CategoryRepository extends ServiceEntityRepository
     }
 
     /**
+     * Ordre alphabétique hiérarchique : chaque poste racine suivi de ses
+     * sous-catégories triées, pour tous les selects de catégories.
+     *
      * @return list<Category>
      */
     public function findAllOrdered(): array
@@ -37,7 +40,9 @@ class CategoryRepository extends ServiceEntityRepository
             ->leftJoin('c.parent', 'p')
             ->addSelect('p')
             ->addSelect('COALESCE(p.name, c.name) AS HIDDEN sortName')
+            ->addSelect('CASE WHEN c.parent IS NULL THEN 0 ELSE 1 END AS HIDDEN depthRank')
             ->orderBy('sortName', 'ASC')
+            ->addOrderBy('depthRank', 'ASC')
             ->addOrderBy('c.name', 'ASC')
             ->getQuery()
             ->getResult();

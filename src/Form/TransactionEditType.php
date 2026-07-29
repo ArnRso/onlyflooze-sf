@@ -6,6 +6,7 @@ use App\Entity\Category;
 use App\Entity\Tag;
 use App\Entity\Transaction;
 use App\Enum\TransactionNature;
+use App\Repository\CategoryRepository;
 use Symfony\Bridge\Doctrine\Form\Type\EntityType;
 use Symfony\Component\Form\AbstractType;
 use Symfony\Component\Form\Extension\Core\Type\EnumType;
@@ -17,11 +18,17 @@ use Symfony\Component\OptionsResolver\OptionsResolver;
  */
 class TransactionEditType extends AbstractType
 {
+    public function __construct(
+        private readonly CategoryRepository $categoryRepository,
+    ) {
+    }
+
     public function buildForm(FormBuilderInterface $builder, array $options): void
     {
         $builder
             ->add('category', EntityType::class, [
                 'class' => Category::class,
+                'choices' => $this->categoryRepository->findAllOrdered(),
                 'choice_label' => 'fullName',
                 'required' => false,
                 'placeholder' => 'À trier',
