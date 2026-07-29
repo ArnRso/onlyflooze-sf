@@ -5,6 +5,7 @@ namespace App\Form;
 use App\Entity\CategorizationRule;
 use App\Entity\Category;
 use App\Enum\TransactionNature;
+use App\Repository\CategoryRepository;
 use Symfony\Bridge\Doctrine\Form\Type\EntityType;
 use Symfony\Component\Form\AbstractType;
 use Symfony\Component\Form\CallbackTransformer;
@@ -20,6 +21,11 @@ use Symfony\Component\OptionsResolver\OptionsResolver;
  */
 class RuleEditType extends AbstractType
 {
+    public function __construct(
+        private readonly CategoryRepository $categoryRepository,
+    ) {
+    }
+
     public function buildForm(FormBuilderInterface $builder, array $options): void
     {
         $builder
@@ -28,6 +34,7 @@ class RuleEditType extends AbstractType
             ])
             ->add('category', EntityType::class, [
                 'class' => Category::class,
+                'choices' => $this->categoryRepository->findAllOrdered(),
                 'choice_label' => 'fullName',
                 'label' => 'Catégorie',
             ])
