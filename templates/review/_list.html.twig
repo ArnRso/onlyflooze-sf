@@ -1,0 +1,5 @@
+{% for transaction in transactions %}
+    {{ include('review/_row.html.twig') }}
+{% else %}
+    <tr><td colspan="4" class="text-center text-muted py-4">🎉 Tout est trié !</td></tr>
+{% endfor %}

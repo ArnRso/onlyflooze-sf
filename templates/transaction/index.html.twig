@@ -1,569 +1,101 @@
 {% extends 'base.html.twig' %}
 
-{% block title %}Mes Transactions - OnlyFlooze{% endblock %}
-
-{% block stylesheets %}
-    {{ parent() }}
-{% endblock %}
-
-{% block javascripts %}
-    {{ parent() }}
-    {{ importmap('transaction-pagination') }}
-    {{ importmap('transaction-management') }}
-{% endblock %}
+{% block title %}Transactions — OnlyFlooze{% endblock %}
 
 {% block body %}
-    <div class="container py-4">
-        <div class="d-flex justify-content-between align-items-center mb-4">
-            <h1 class="h2 text-primary">💰 Mes Transactions</h1>
-            <div class="btn-group">
-                <button class="btn btn-outline-primary" type="button" data-bs-toggle="collapse"
-                        data-bs-target="#searchForm">
-                    <i class="fas fa-search"></i> Rechercher
-                </button>
-                <a href="{{ path('app_recurring_transaction_index') }}" class="btn btn-outline-secondary">
-                    <i class="fas fa-repeat"></i> Transactions récurrentes
-                </a>
-                <a href="{{ path('app_transaction_new') }}" class="btn btn-primary">
-                    <i class="fas fa-plus"></i> Nouvelle transaction
-                </a>
+    <div class="d-flex align-items-center justify-content-between mb-4">
+        <h1 class="h3 mb-0">Transactions</h1>
+        <span class="text-muted">{{ total }} au total</span>
+    </div>
+
+    <form method="get" class="card mb-3">
+        <div class="card-body row g-2 align-items-end">
+            <div class="col-md-4">
+                <label class="form-label" for="filter-q">Recherche</label>
+                <input type="search" class="form-control form-control-sm" id="filter-q" name="q" value="{{ search }}" placeholder="Libellé…">
+            </div>
+            <div class="col-md-4">
+                <label class="form-label" for="filter-category">Catégorie</label>
+                <select class="form-select form-select-sm" id="filter-category" name="category">
+                    <option value="">Toutes</option>
+                    {% for category in categories %}
+                        <option value="{{ category.id }}" {{ selectedCategory and selectedCategory.id == category.id ? 'selected' }}>{{ category.fullName }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-2 form-check ms-2 mb-2">
+                <input class="form-check-input" type="checkbox" id="filter-to-review" name="to_review" value="1" {{ onlyToReview ? 'checked' }}>
+                <label class="form-check-label" for="filter-to-review">À trier</label>
+            </div>
+            <div class="col-md-2">
+                <button type="submit" class="btn btn-sm btn-outline-primary">Filtrer</button>
             </div>
         </div>
+    </form>
 
-        <!-- Formulaire de recherche repliable -->
-        <div
-            class="collapse {% if app.request.query.count > 0 and app.request.query.get('page') is empty %}show{% endif %}"
-            id="searchForm">
-            <div class="card mb-4">
-                <div class="card-header">
-                    <h5 class="mb-0">
-                        <i class="fas fa-search"></i> Rechercher des transactions
-                    </h5>
-                </div>
-                <div class="card-body">
-                    <form method="GET" action="{{ path('app_transaction_index') }}">
-                        <div class="row">
-                            <div class="col-md-4 mb-3">
-                                <label for="label" class="form-label">Libellé</label>
-                                <input type="text" class="form-control" id="label" name="label"
-                                       value="{{ app.request.query.get('label', '') }}"
-                                       placeholder="Rechercher dans les libellés...">
-                            </div>
-                            <div class="col-md-2 mb-3">
-                                <label for="minAmount" class="form-label">Montant min</label>
-                                <input type="number" step="0.01" class="form-control"
-                                       id="minAmount" name="minAmount" placeholder="Ex: -100"
-                                       value="{{ app.request.query.get('minAmount', '') }}">
-                            </div>
-                            <div class="col-md-2 mb-3">
-                                <label for="maxAmount" class="form-label">Montant max</label>
-                                <input type="number" step="0.01" class="form-control"
-                                       id="maxAmount" name="maxAmount" placeholder="Ex: 100"
-                                       value="{{ app.request.query.get('maxAmount', '') }}">
-                            </div>
-                            <div class="col-md-2 mb-3">
-                                <label for="startDate" class="form-label">Date début</label>
-                                <input type="date" class="form-control" id="startDate" name="startDate"
-                                       value="{{ app.request.query.get('startDate', '') }}">
-                            </div>
-                            <div class="col-md-2 mb-3">
-                                <label for="endDate" class="form-label">Date fin</label>
-                                <input type="date" class="form-control" id="endDate" name="endDate"
-                                       value="{{ app.request.query.get('endDate', '') }}">
-                            </div>
-                        </div>
-
-                        <div class="row">
-                            <div class="col-md-3 mb-3">
-                                <label for="budgetMonth" class="form-label">Mois budgétaire</label>
-                                <input type="text" class="form-control" id="budgetMonth"
-                                       name="budgetMonth" placeholder="Ex: 2024-01"
-                                       value="{{ app.request.query.get('budgetMonth', '') }}">
-                            </div>
-                            <div class="col-md-3 mb-3">
-                                <label for="hasRecurringTransaction" class="form-label">Transaction récurrente</label>
-                                <select class="form-select" id="hasRecurringTransaction"
-                                        name="hasRecurringTransaction">
-                                    <option value="">Toutes</option>
-                                    <option value="no"
-                                            {% if app.request.query.get('hasRecurringTransaction') == 'no' %}selected{% endif %}>
-                                        Sans transaction récurrente
-                                    </option>
-                                    <option value="yes"
-                                            {% if app.request.query.get('hasRecurringTransaction') == 'yes' %}selected{% endif %}>
-                                        Avec transaction récurrente
-                                    </option>
-                                </select>
-                            </div>
-                            <div class="col-md-3 mb-3">
-                                <label for="specificRecurringTransaction" class="form-label">Transaction récurrente
-                                    spécifique</label>
-                                <select class="form-select" id="specificRecurringTransaction"
-                                        name="specificRecurringTransaction">
-                                    <option value="">Toutes</option>
-                                    {% for recurring in recurringTransactions %}
-                                        <option value="{{ recurring[0].id }}"
-                                                {% if app.request.query.get('specificRecurringTransaction') == recurring[0].id %}selected{% endif %}>
-                                            {{ recurring[0].name }}
-                                        </option>
-                                    {% endfor %}
-                                </select>
-                            </div>
-                            <div class="col-md-3 mb-3">
-                                <label for="specificTag" class="form-label">Tag spécifique</label>
-                                <select class="form-select" id="specificTag" name="specificTag">
-                                    <option value="">Tous</option>
-                                    {% for tag in tags %}
-                                        <option value="{{ tag[0].id }}"
-                                                {% if app.request.query.get('specificTag') == tag[0].id %}selected{% endif %}>
-                                            {{ tag[0].name }}
-                                        </option>
-                                    {% endfor %}
-                                </select>
-                            </div>
-                        </div>
-
-                        <div class="row">
-                            <div class="col-md-12 mb-3 d-flex align-items-end justify-content-end">
-                                <div class="w-100">
-                                    <a href="{{ path('app_transaction_index') }}"
-                                       class="btn btn-outline-secondary me-2">
-                                        <i class="fas fa-eraser"></i> Effacer
-                                    </a>
-                                    <button type="submit" class="btn btn-primary">
-                                        <i class="fas fa-search"></i> Rechercher
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    </form>
-                </div>
-            </div>
-        </div>
-
-        <!-- Statistiques -->
-        <div class="row mb-4">
-            <div class="col-md-3 mb-3">
-                <div class="card text-center h-100">
-                    <div class="card-body d-flex flex-column justify-content-center">
-                        <h5 class="card-title text-primary">Total</h5>
-                        <h3 class="{% if stats.total >= 0 %}text-success{% else %}text-danger{% endif %}">
-                            {{ stats.total|number_format(2, ',', ' ') }}&nbsp;€
-                        </h3>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-3 mb-3">
-                <div class="card text-center h-100">
-                    <div class="card-body d-flex flex-column justify-content-center">
-                        <h5 class="card-title text-info">Transactions</h5>
-                        <h3 class="text-dark">{{ stats.count }}</h3>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-3 mb-3">
-                <div class="card text-center h-100">
-                    <div class="card-body d-flex flex-column justify-content-center">
-                        <h5 class="card-title text-success">Entrées</h5>
-                        <h3 class="text-success">{{ stats.positive_total|number_format(2, ',', ' ') }}&nbsp;€</h3>
-                        <small class="text-muted">({{ stats.positive_count }} transactions)</small>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-3 mb-3">
-                <div class="card text-center h-100">
-                    <div class="card-body d-flex flex-column justify-content-center">
-                        <h5 class="card-title text-danger">Sorties</h5>
-                        <h3 class="text-danger">{{ stats.negative_total|number_format(2, ',', ' ') }}&nbsp;€</h3>
-                        <small class="text-muted">({{ stats.negative_count }} transactions)</small>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Bouton d'attribution en masse (caché par défaut) -->
-        <div id="bulk-actions" class="alert alert-primary d-none" role="alert">
-            <div class="d-flex justify-content-between align-items-center">
-                <div>
-                    <i class="fas fa-check-square"></i>
-                    <span id="selected-count">0</span> transaction(s) sélectionnée(s)
-                </div>
-                <div>
-                    <button type="button" class="btn btn-sm btn-outline-secondary me-2" id="clear-selection">
-                        <i class="fas fa-times"></i> Désélectionner tout
-                    </button>
-                    <div class="btn-group">
-                        <button type="button" class="btn btn-sm btn-success" data-bs-toggle="modal"
-                                data-bs-target="#assignModal">
-                            <i class="fas fa-tasks"></i> Attribuer à une récurrente
-                        </button>
-                        <button type="button" class="btn btn-sm btn-warning" data-bs-toggle="modal"
-                                data-bs-target="#assignTagModal">
-                            <i class="fas fa-tags"></i> Attribuer des tags
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Liste des transactions -->
-        {% if transactions.items|length > 0 %}
-            <!-- Pagination du haut -->
-            <div class="card mb-3">
-                <div class="card-body py-2">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div class="d-flex align-items-center">
-                            <small class="text-muted me-3">
-                                {{ transactions.currentPageNumber }} / {{ transactions.pageCount }}
-                                ({{ transactions.totalItemCount }} transactions)
-                            </small>
-                            <div class="d-flex align-items-center">
-                                <label for="per-page" class="form-label me-2 mb-0 small">Par page:</label>
-                                <select id="per-page" class="form-select form-select-sm" style="width: auto;">
-                                    <option value="10" {{ app.request.query.get('limit') == '10' ? 'selected' : '' }}>
-                                        10
-                                    </option>
-                                    <option
-                                        value="20" {{ app.request.query.get('limit') == '20' or app.request.query.get('limit') is empty ? 'selected' : '' }}>
-                                        20
-                                    </option>
-                                    <option value="50" {{ app.request.query.get('limit') == '50' ? 'selected' : '' }}>
-                                        50
-                                    </option>
-                                    <option value="100" {{ app.request.query.get('limit') == '100' ? 'selected' : '' }}>
-                                        100
-                                    </option>
-                                    <option value="250" {{ app.request.query.get('limit') == '250' ? 'selected' : '' }}>
-                                        250
-                                    </option>
-                                    <option value="500" {{ app.request.query.get('limit') == '500' ? 'selected' : '' }}>
-                                        500
-                                    </option>
-                                </select>
-                            </div>
-                        </div>
-                        <div>
-                            {{ knp_pagination_render(transactions) }}
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="card">
-                <div class="card-header d-flex justify-content-between align-items-center">
-                    <h5 class="mb-0">Liste des transactions</h5>
-                    <div class="form-check">
-                        <input class="form-check-input" type="checkbox" id="select-all">
-                        <label class="form-check-label" for="select-all">
-                            Tout sélectionner
-                        </label>
-                    </div>
-                </div>
-                <div class="card-body p-0">
-                    <div class="table-responsive">
-                        <table class="table table-hover mb-0">
-                            <thead class="table-light">
-                            <tr>
-                                <th width="50">
-                                    <i class="fas fa-check-square text-muted"></i>
-                                </th>
-                                <th>Date</th>
-                                <th>Libellé</th>
-                                <th class="text-end">Montant</th>
-                                <th>Mois budgétaire</th>
-                                <th>Transaction récurrente</th>
-                                <th>Tags</th>
-                                <th>Informations</th>
-                                <th class="text-center">Actions</th>
-                            </tr>
-                            </thead>
-                            <tbody>
-                            {% for transaction in transactions.items %}
-                                <tr>
-                                    <td>
-                                        <div class="form-check">
-                                            <input class="form-check-input" type="checkbox"
-                                                   name="transaction_ids[]"
-                                                   value="{{ transaction.id }}"
-                                                   id="transaction_{{ transaction.id }}">
-                                        </div>
-                                    </td>
-                                    <td>
-                                        <small
-                                            class="text-muted">{{ transaction.transactionDate|date('d/m/Y') }}</small>
-                                    </td>
-                                    <td>
-                                        <strong>{{ transaction.label }}</strong>
-                                        {% if transaction.info %}
-                                            <br>
-                                            <small class="text-muted">
-                                                {{ transaction.info|slice(0, 80) }}{% if transaction.info|length > 80 %}...{% endif %}
-                                            </small>
-                                        {% endif %}
-                                    </td>
-                                    <td class="text-end">
-                                        <span class="{% if transaction.amountAsFloat >= 0 %}amount-positive{% else %}amount-negative{% endif %} fw-bold">
-                                            {{ transaction.amount|number_format(2, ',', ' ') }}&nbsp;€
-                                        </span>
-                                    </td>
-                                    <td>
-                                        {% if transaction.budgetMonth %}
-                                            <span class="badge bg-secondary">{{ transaction.budgetMonth }}</span>
-                                        {% else %}
-                                            <small class="text-muted">-</small>
-                                        {% endif %}
-                                    </td>
-                                    <td>
-                                        {% if transaction.recurringTransaction %}
-                                            <span class="badge bg-primary text-white">
-                                                🔄 {{ transaction.recurringTransaction.name }}
-                                            </span>
-                                        {% else %}
-                                            <small class="text-muted">-</small>
-                                        {% endif %}
-                                    </td>
-                                    <td>
-                                        {% if transaction.tags|length > 0 %}
-                                            {% for tag in transaction.tags %}
-                                                {% include 'components/tag.html.twig' with {
-                                                    'tag': tag,
-                                                    'size': 'sm',
-                                                    'class': 'me-1 mb-1'
-                                                } %}
-                                            {% endfor %}
-                                        {% else %}
-                                            <small class="text-muted">-</small>
-                                        {% endif %}
-                                    </td>
-                                    <td>
-                                        {% if transaction.info %}
-                                            <small
-                                                class="text-muted">{{ transaction.info|slice(0, 50) }}{% if transaction.info|length > 50 %}...{% endif %}</small>
-                                        {% else %}
-                                            <small class="text-muted">-</small>
-                                        {% endif %}
-                                    </td>
-                                    <td class="text-center">
-                                        <div class="btn-group btn-group-sm">
-                                            <a href="{{ path('app_transaction_show', {'id': transaction.id}) }}"
-                                               class="btn btn-outline-info">
-                                                <i class="fas fa-eye"></i>
-                                            </a>
-                                            <a href="{{ path('app_transaction_edit', {'id': transaction.id}) }}"
-                                               class="btn btn-outline-warning">
-                                                <i class="fas fa-edit"></i>
-                                            </a>
-                                            <button type="button" class="btn btn-outline-danger" data-bs-toggle="modal"
-                                                    data-bs-target="#deleteModal{{ transaction.id }}">
-                                                <i class="fas fa-trash"></i>
-                                            </button>
-                                        </div>
-
-                                        <!-- Modal de suppression -->
-                                        <div class="modal fade" id="deleteModal{{ transaction.id }}" tabindex="-1">
-                                            <div class="modal-dialog">
-                                                <div class="modal-content">
-                                                    <div class="modal-header">
-                                                        <h5 class="modal-title">Confirmer la suppression</h5>
-                                                        <button type="button" class="btn-close"
-                                                                data-bs-dismiss="modal"></button>
-                                                    </div>
-                                                    <div class="modal-body">
-                                                        <p>Êtes-vous sûr de vouloir supprimer cette transaction ?</p>
-                                                        <p class="fw-bold">{{ transaction.label }}
-                                                            - {{ transaction.amount|number_format(2, ',', ' ') }}
-                                                            &nbsp;€</p>
-                                                    </div>
-                                                    <div class="modal-footer">
-                                                        <button type="button" class="btn btn-secondary"
-                                                                data-bs-dismiss="modal">Annuler
-                                                        </button>
-                                                        <form method="post"
-                                                              action="{{ path('app_transaction_delete', {'id': transaction.id}) }}"
-                                                              style="display: inline;">
-                                                            <input type="hidden" name="_token"
-                                                                   value="{{ csrf_token('delete' ~ transaction.id) }}">
-                                                            <button type="submit" class="btn btn-danger">Supprimer
-                                                            </button>
-                                                        </form>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </td>
-                                </tr>
+    <div class="card">
+        <table class="table table-hover table-sm align-middle mb-0">
+            <thead>
+                <tr>
+                    <th class="ps-3">Date</th>
+                    <th>Libellé</th>
+                    <th class="text-end">Montant</th>
+                    <th>Catégorie</th>
+                    <th>Nature</th>
+                    <th>Tags</th>
+                    <th class="pe-3"></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for transaction in transactions %}
+                    <tr>
+                        <td class="ps-3 text-nowrap">{{ transaction.operationDate|date('d/m/Y') }}</td>
+                        <td>
+                            {{ transaction.label }}
+                            {% if transaction.recurrence %}
+                                <span class="badge text-bg-info" title="Récurrence : {{ transaction.recurrence.name }}">↻</span>
+                            {% endif %}
+                            {% if transaction.amountOutOfTolerance %}
+                                <span class="badge text-bg-warning" title="Montant hors tolérance de la récurrence">⚠</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-end text-nowrap {{ transaction.amountCents < 0 ? 'text-danger' : 'text-success' }}">{{ transaction.amountCents|money(true) }}</td>
+                        <td>
+                            {% if transaction.category %}
+                                {{ transaction.category.fullName }}
+                            {% else %}
+                                <span class="text-muted">À trier</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ transaction.nature.label }}</td>
+                        <td>
+                            {% for tag in transaction.tags %}
+                                <span class="badge text-bg-light border">{{ tag.name }}</span>
                             {% endfor %}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-
-                <!-- Pagination -->
-                <div class="card-footer">
-                    {{ knp_pagination_render(transactions) }}
-                </div>
-            </div>
-        {% else %}
-            <div class="text-center py-5">
-                <div class="mb-4">
-                    <i class="fas fa-receipt fs-1 text-muted"></i>
-                </div>
-                <h4 class="text-muted">Aucune transaction</h4>
-                <p class="text-muted">Commencez par créer votre première transaction !</p>
-                <a href="{{ path('app_transaction_new') }}" class="btn btn-primary">
-                    <i class="fas fa-plus"></i> Créer une transaction
-                </a>
-            </div>
-        {% endif %}
+                        </td>
+                        <td class="pe-3 text-end">
+                            <a class="btn btn-sm btn-outline-secondary" href="{{ path('app_transaction_edit', {id: transaction.id}) }}">Modifier</a>
+                        </td>
+                    </tr>
+                {% else %}
+                    <tr><td colspan="7" class="text-center text-muted py-4">Aucune transaction.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
     </div>
 
-    <!-- Modal d'attribution en masse -->
-    <div class="modal fade" id="assignModal" tabindex="-1" aria-labelledby="assignModalLabel" aria-hidden="true">
-        <div class="modal-dialog modal-lg">
-            <div class="modal-content">
-                <form method="POST" action="{{ path('app_transaction_assign_recurring') }}" id="assign-form">
-                    <div class="modal-header">
-                        <h5 class="modal-title" id="assignModalLabel">
-                            <i class="fas fa-tasks"></i> Attribution en masse
-                        </h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                    </div>
-                    <div class="modal-body">
-                        <input type="hidden" name="_token" value="{{ csrf_token('assign_recurring') }}">
-
-                        <!-- Inclure les critères de recherche pour revenir aux mêmes résultats -->
-                        {% for key, value in app.request.query.all %}
-                            <input type="hidden" name="search_{{ key }}" value="{{ value }}">
-                        {% endfor %}
-
-                        <div class="alert alert-info">
-                            <i class="fas fa-info-circle"></i>
-                            <strong>Instructions :</strong> Vous êtes sur le point d'attribuer <span
-                                id="modal-selected-count">0</span> transaction(s) à une transaction récurrente.
-                        </div>
-
-                        <div class="row">
-                            <div class="col-md-6 mb-3">
-                                <label for="recurring_transaction_id" class="form-label">Transaction récurrente</label>
-                                <select class="form-select" id="recurring_transaction_id"
-                                        name="recurring_transaction_id" required
-                                        onchange="toggleNewRecurringField(this)">
-                                    <option value="">Sélectionner une transaction récurrente</option>
-                                    {% for recurring in recurringTransactions %}
-                                        <option value="{{ recurring[0].id }}">{{ recurring[0].name }}
-                                            ({{ recurring.transactionCount }} transactions)
-                                        </option>
-                                    {% endfor %}
-                                    <option value="new">➕ Créer une nouvelle transaction récurrente</option>
-                                </select>
-                            </div>
-                            <div class="col-md-6 mb-3 d-none" id="new-recurring-name-group">
-                                <label for="new_recurring_name" class="form-label">Nom de la nouvelle transaction
-                                    récurrente</label>
-                                <input type="text" class="form-control" id="new_recurring_name"
-                                       name="new_recurring_name" placeholder="Ex: Salaire mensuel">
-                            </div>
-                        </div>
-                    </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
-                        <button type="submit" class="btn btn-success">
-                            <i class="fas fa-check"></i> Attribuer les transactions
-                        </button>
-                    </div>
-                </form>
-            </div>
-        </div>
-    </div>
-
-    <!-- Modal d'attribution des tags -->
-    <div class="modal fade" id="assignTagModal" tabindex="-1" aria-labelledby="assignTagModalLabel" aria-hidden="true">
-        <div class="modal-dialog modal-lg">
-            <div class="modal-content">
-                <form method="POST" action="{{ path('app_transaction_assign_tags') }}" id="assign-tag-form">
-                    <div class="modal-header">
-                        <h5 class="modal-title" id="assignTagModalLabel">
-                            <i class="fas fa-tags"></i> Attribution de tags en masse
-                        </h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                    </div>
-                    <div class="modal-body">
-                        <input type="hidden" name="_token" value="{{ csrf_token('assign_tags') }}">
-
-                        <!-- Inclure les critères de recherche pour revenir aux mêmes résultats -->
-                        {% for key, value in app.request.query.all %}
-                            <input type="hidden" name="search_{{ key }}" value="{{ value }}">
-                        {% endfor %}
-
-                        <div class="alert alert-info">
-                            <i class="fas fa-info-circle"></i>
-                            <strong>Instructions :</strong> Vous êtes sur le point d'attribuer des tags à <span
-                                id="modal-tag-selected-count">0</span> transaction(s).
-                        </div>
-
-                        <div class="row">
-                            <div class="col-md-6 mb-3">
-                                <label class="form-label">Tags existants</label>
-                                <div id="existing-tags-visual" class="border rounded p-3"
-                                     style="min-height: 150px; max-height: 200px; overflow-y: auto;">
-                                    {% for tag in tags %}
-                                        <div class="tag-item d-inline-block m-1 position-relative"
-                                             data-tag-id="{{ tag[0].id }}"
-                                             data-tag-name="{{ tag[0].name }}"
-                                             style="cursor: pointer;">
-                                            <span class="badge fs-6 py-2 px-3"
-                                                  style="background-color: {{ tag[0].color }}; color: white;">
-                                                {{ tag[0].name }} ({{ tag.transactionCount }})
-                                            </span>
-                                            <i class="fas fa-check position-absolute top-0 start-100 translate-middle bg-success text-white rounded-circle p-1 tag-check"
-                                               style="font-size: 0.7rem; display: none;"></i>
-                                        </div>
-                                        <!-- Checkbox caché pour le formulaire -->
-                                        <input type="checkbox" class="d-none existing-tag-checkbox"
-                                               name="existing_tags[]"
-                                               value="{{ tag[0].id }}"
-                                               id="tag_{{ tag[0].id }}">
-                                    {% endfor %}
-                                </div>
-                                <small class="form-text text-muted">Cliquez sur les tags pour les sélectionner</small>
-                            </div>
-                            <div class="col-md-6 mb-3">
-                                <label for="new_tags" class="form-label">Nouveaux tags</label>
-                                <div id="new-tags-container">
-                                    <div class="new-tag-input mb-2">
-                                        <div class="input-group">
-                                            <input type="text" class="form-control new-tag-name-input"
-                                                   name="new_tags[0][name]" placeholder="Nom du tag">
-                                            <button type="button" class="btn btn-outline-danger remove-tag-input">
-                                                <i class="fas fa-minus"></i>
-                                            </button>
-                                        </div>
-                                        <small class="form-text text-muted duplicate-warning" style="display: none;">
-                                            <i class="fas fa-exclamation-triangle text-warning"></i> Ce tag existe déjà
-                                        </small>
-                                        <div class="similar-tags-suggestions" style="display: none;">
-                                            <small class="form-text text-info">
-                                                <i class="fas fa-lightbulb"></i> Tags similaires :
-                                            </small>
-                                            <div class="similar-tags-list mt-1"></div>
-                                        </div>
-                                    </div>
-                                </div>
-                                <button type="button" class="btn btn-outline-primary btn-sm" id="add-tag-input">
-                                    <i class="fas fa-plus"></i> Ajouter un tag
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
-                        <button type="submit" class="btn btn-warning">
-                            <i class="fas fa-tags"></i> Attribuer les tags
-                        </button>
-                    </div>
-                </form>
-            </div>
-        </div>
-    </div>
-
+    {% if pageCount > 1 %}
+        {% set params = {q: search ?: null, category: selectedCategory ? selectedCategory.id : null, to_review: onlyToReview ? 1 : null} %}
+        <nav class="mt-3" aria-label="Pagination">
+            <ul class="pagination pagination-sm justify-content-center">
+                <li class="page-item {{ page <= 1 ? 'disabled' }}">
+                    <a class="page-link" href="{{ path('app_transactions', params|merge({page: page - 1})) }}">←</a>
+                </li>
+                <li class="page-item disabled"><span class="page-link">{{ page }} / {{ pageCount }}</span></li>
+                <li class="page-item {{ page >= pageCount ? 'disabled' }}">
+                    <a class="page-link" href="{{ path('app_transactions', params|merge({page: page + 1})) }}">→</a>
+                </li>
+            </ul>
+        </nav>
+    {% endif %}
 {% endblock %}

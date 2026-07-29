@@ -1,81 +1,52 @@
 <!DOCTYPE html>
 <html lang="fr">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>{% block title %}OnlyFlooze - Gestion de finances personnelles{% endblock %}</title>
-    <link rel="icon"
-          href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 128 128%22><text y=%221.2em%22 font-size=%2296%22>💰</text></svg>">
-    {% block stylesheets %}
-    {% endblock %}
-
-    {% block javascripts %}
-        {% block importmap %}{{ importmap('app') }}{% endblock %}
-    {% endblock %}
-</head>
-<body>
-<nav class="navbar navbar-expand-lg navbar-dark bg-primary">
-    <div class="container">
-        <a class="navbar-brand fw-bold" href="{{ path('app_home') }}">
-            💰 OnlyFlooze
-        </a>
-        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
-            <span class="navbar-toggler-icon"></span>
-        </button>
-        <div class="collapse navbar-collapse" id="navbarNav">
-            <ul class="navbar-nav ms-auto">
-                {% if app.user %}
-                    <li class="nav-item">
-                        <a class="nav-link" href="{{ path('app_transaction_index') }}">Mes Transactions</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="{{ path('app_recurring_transaction_index') }}">Transactions
-                            Récurrentes</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="{{ path('app_tag_index') }}">Mes Tags</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="{{ path('app_csv_import_upload') }}">Import CSV</a>
-                    </li>
-                    <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
-                            {{ app.user.fullName }}
-                        </a>
-                        <ul class="dropdown-menu">
-                            <li><a class="dropdown-item" href="{{ path('app_profile') }}">Mon Profil</a></li>
-                            <li>
-                                <hr class="dropdown-divider">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <title>{% block title %}OnlyFlooze{% endblock %}</title>
+        <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 128 128%22><text y=%221.2em%22 font-size=%2296%22>💶</text></svg>">
+        {% block stylesheets %}{% endblock %}
+        {% block javascripts %}
+            {% block importmap %}{{ importmap('app') }}{% endblock %}
+        {% endblock %}
+    </head>
+    <body class="bg-body-tertiary">
+        {% if app.user %}
+            <nav class="navbar navbar-expand-lg bg-body border-bottom mb-4">
+                <div class="container">
+                    <a class="navbar-brand" href="{{ path('app_home') }}">💶 OnlyFlooze</a>
+                    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#mainNav" aria-controls="mainNav" aria-expanded="false" aria-label="Basculer la navigation">
+                        <span class="navbar-toggler-icon"></span>
+                    </button>
+                    <div class="collapse navbar-collapse" id="mainNav">
+                        <ul class="navbar-nav me-auto">
+                            <li class="nav-item">
+                                <a class="nav-link" href="{{ path('app_review') }}">
+                                    À trier
+                                    <span id="nav-review-badge" class="badge text-bg-danger">{{ to_review_count() }}</span>
+                                </a>
                             </li>
-                            <li><a class="dropdown-item" href="{{ path('app_logout') }}">Déconnexion</a></li>
+                            <li class="nav-item"><a class="nav-link" href="{{ path('app_transactions') }}">Transactions</a></li>
+                            <li class="nav-item"><a class="nav-link" href="{{ path('app_recurrences') }}">Récurrences</a></li>
+                            <li class="nav-item"><a class="nav-link" href="{{ path('app_import') }}">Import</a></li>
+                            <li class="nav-item dropdown">
+                                <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">Réglages</a>
+                                <ul class="dropdown-menu">
+                                    <li><a class="dropdown-item" href="{{ path('app_categories') }}">Catégories</a></li>
+                                    <li><a class="dropdown-item" href="{{ path('app_rules') }}">Règles apprises</a></li>
+                                    <li><a class="dropdown-item" href="{{ path('app_tags') }}">Tags</a></li>
+                                </ul>
+                            </li>
                         </ul>
-                    </li>
-                {% else %}
-                    <li class="nav-item">
-                        <a class="nav-link" href="{{ path('app_login') }}">Connexion</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="{{ path('app_register') }}">Inscription</a>
-                    </li>
-                {% endif %}
-            </ul>
-        </div>
-    </div>
-</nav>
+                        <a class="btn btn-sm btn-outline-secondary" href="{{ path('app_logout') }}">Déconnexion</a>
+                    </div>
+                </div>
+            </nav>
+        {% endif %}
 
-<main>
-    <!-- Flash Messages Global (statiques + HTMX) -->
-    <div id="flash-messages-container" class="m-3">
-        {% include '_flash_messages.html.twig' %}
-    </div>
-
-    {% block body %}{% endblock %}
-</main>
-
-<footer class="bg-light py-4 mt-5">
-    <div class="container text-center">
-        <p class="mb-0">&copy; {{ 'now'|date('Y') }} OnlyFlooze - Gestion de finances personnelles</p>
-    </div>
-</footer>
-</body>
+        <main class="container mb-5">
+            {{ include('_flash.html.twig') }}
+            {% block body %}{% endblock %}
+        </main>
+    </body>
 </html>

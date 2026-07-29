@@ -1,0 +1,125 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Récurrences — OnlyFlooze{% endblock %}
+
+{% block body %}
+    <div class="d-flex align-items-center justify-content-between mb-4">
+        <h1 class="h3 mb-0">Récurrences</h1>
+        <a class="btn btn-primary btn-sm" href="{{ path('app_recurrence_new') }}">Créer à la main</a>
+    </div>
+
+    {% if suggestions is not empty %}
+        <div class="card mb-4 border-primary">
+            <div class="card-header text-bg-primary">Propositions détectées</div>
+            <div class="card-body p-0">
+                <table class="table table-sm align-middle mb-0">
+                    <tbody>
+                        {% for suggestion in suggestions %}
+                            <tr>
+                                <td class="ps-3">
+                                    <strong>{{ suggestion.rule.name }}</strong>
+                                    {% if suggestion.category %}
+                                        <span class="text-muted">({{ suggestion.category.fullName }})</span>
+                                    {% endif %}
+                                </td>
+                                <td>~{{ suggestion.expectedAmountCents|money }} vers le {{ suggestion.expectedDayOfMonth }}</td>
+                                <td>
+                                    <button type="button" class="btn btn-sm btn-link p-0" data-bs-toggle="collapse" data-bs-target="#suggestion-{{ suggestion.rule.id }}" aria-expanded="false" aria-controls="suggestion-{{ suggestion.rule.id }}">
+                                        {{ suggestion.occurrenceCount }} occurrences ▾
+                                    </button>
+                                    <span class="text-muted">dernière le {{ suggestion.lastOccurrenceDate|date('d/m/Y') }}</span>
+                                </td>
+                                <td class="text-end pe-3 text-nowrap">
+                                    <form method="post" action="{{ path('app_recurrence_promote', {ruleId: suggestion.rule.id}) }}" class="d-inline">
+                                        <input type="hidden" name="_token" value="{{ csrf_token('promote' ~ suggestion.rule.id) }}">
+                                        <button type="submit" class="btn btn-sm btn-primary">Suivre</button>
+                                    </form>
+                                    <form method="post" action="{{ path('app_recurrence_dismiss', {ruleId: suggestion.rule.id}) }}" class="d-inline">
+                                        <input type="hidden" name="_token" value="{{ csrf_token('dismiss' ~ suggestion.rule.id) }}">
+                                        <button type="submit" class="btn btn-sm btn-outline-secondary">Ignorer</button>
+                                    </form>
+                                </td>
+                            </tr>
+                            <tr class="collapse" id="suggestion-{{ suggestion.rule.id }}">
+                                <td colspan="4" class="p-0">
+                                    <table class="table table-sm mb-0 bg-body-tertiary">
+                                        <tbody>
+                                            {% for transaction in suggestion.transactions %}
+                                                <tr>
+                                                    <td class="ps-5 text-nowrap">{{ transaction.operationDate|date('d/m/Y') }}</td>
+                                                    <td>{{ transaction.label }}</td>
+                                                    <td class="text-end pe-3 text-nowrap {{ transaction.amountCents < 0 ? 'text-danger' : 'text-success' }}">{{ transaction.amountCents|money(true) }}</td>
+                                                </tr>
+                                            {% endfor %}
+                                        </tbody>
+                                    </table>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    {% endif %}
+
+    <div class="card">
+        <div class="card-header">Suivies — état {{ month|date('m/Y') }}</div>
+        <table class="table table-sm table-hover align-middle mb-0">
+            <thead>
+                <tr>
+                    <th class="ps-3">Nom</th>
+                    <th>Catégorie</th>
+                    <th>Attendu</th>
+                    <th>État du mois</th>
+                    <th class="pe-3"></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for status in statuses %}
+                    {% set recurrence = status.recurrence %}
+                    <tr class="{{ not recurrence.active ? 'opacity-50' }}">
+                        <td class="ps-3">
+                            <a href="{{ path('app_recurrence_show', {id: recurrence.id}) }}">{{ recurrence.name }}</a>
+                            {% if not recurrence.active %}<span class="badge text-bg-secondary">inactive</span>{% endif %}
+                        </td>
+                        <td>{{ recurrence.category ? recurrence.category.fullName : '—' }}</td>
+                        <td>~{{ recurrence.expectedAmountCents|money }} le {{ recurrence.expectedDayOfMonth }} (±{{ recurrence.tolerancePct }} %)</td>
+                        <td>
+                            {% if status.state.value == 'passed' %}
+                                <span class="badge text-bg-success">Passée</span>
+                                {% if status.transaction %}
+                                    {{ status.transaction.amountCents|money }}
+                                    {% if status.transaction.amountOutOfTolerance %}<span class="badge text-bg-warning">⚠ écart</span>{% endif %}
+                                {% endif %}
+                            {% elseif status.state.value == 'upcoming' %}
+                                <span class="badge text-bg-secondary">À venir le {{ status.expectedDate|date('d/m') }}</span>
+                            {% elseif status.state.value == 'ended' %}
+                                <span class="badge text-bg-dark">Terminée le {{ recurrence.endedAt|date('d/m/Y') }}</span>
+                            {% elseif status.state.value == 'not_started' %}
+                                <span class="badge text-bg-light text-muted border">—</span>
+                            {% else %}
+                                <span class="badge text-bg-danger">En retard (attendue le {{ status.expectedDate|date('d/m') }})</span>
+                                {% if status.probablyEnded %}
+                                    <form method="post" action="{{ path('app_recurrence_end', {id: recurrence.id}) }}" class="d-inline">
+                                        <input type="hidden" name="_token" value="{{ csrf_token('end' ~ recurrence.id) }}">
+                                        <span class="badge text-bg-warning">Semble arrêtée</span>
+                                        <button type="submit" class="btn btn-sm btn-outline-dark py-0">Marquer terminée</button>
+                                    </form>
+                                {% endif %}
+                            {% endif %}
+                        </td>
+                        <td class="text-end pe-3 text-nowrap">
+                            <a class="btn btn-sm btn-outline-secondary" href="{{ path('app_recurrence_edit', {id: recurrence.id}) }}">Modifier</a>
+                            <form method="post" action="{{ path('app_recurrence_delete', {id: recurrence.id}) }}" class="d-inline" data-turbo-confirm="Supprimer « {{ recurrence.name }} » ?">
+                                <input type="hidden" name="_token" value="{{ csrf_token('delete' ~ recurrence.id) }}">
+                                <button type="submit" class="btn btn-sm btn-outline-danger">Supprimer</button>
+                            </form>
+                        </td>
+                    </tr>
+                {% else %}
+                    <tr><td colspan="5" class="text-center text-muted py-4">Aucune récurrence suivie pour l'instant.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+{% endblock %}

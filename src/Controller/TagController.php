@@ -3,91 +3,52 @@
 namespace App\Controller;
 
 use App\Entity\Tag;
-use App\Entity\User;
 use App\Form\TagType;
-use App\Security\Voter\TagVoter;
-use App\Service\TagService;
+use App\Repository\TagRepository;
+use App\Service\Catalog\TagManager;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
-use Symfony\Component\Security\Http\Attribute\IsGranted;
 
-#[Route('/tags')]
-#[IsGranted('ROLE_USER')]
 class TagController extends AbstractController
 {
-    public function __construct(
-        private readonly TagService $tagService,
-    ) {
-    }
-
-    #[Route('/', name: 'app_tag_index', methods: ['GET'])]
-    public function index(): Response
+    #[Route('/tags', name: 'app_tags')]
+    public function index(TagRepository $tagRepository): Response
     {
-        /** @var User $user */
-        $user = $this->getUser();
-        $tags = $this->tagService->getUserTagsWithTransactionCount($user);
-        $stats = $this->tagService->getUserTagStats($user);
-
         return $this->render('tag/index.html.twig', [
-            'tags' => $tags,
-            'stats' => $stats,
+            'tags' => $tagRepository->findBy([], ['name' => 'ASC']),
         ]);
     }
 
-    #[Route('/new', name: 'app_tag_new', methods: ['GET', 'POST'])]
-    public function new(Request $request): Response
+    #[Route('/tags/new', name: 'app_tag_new')]
+    public function new(Request $request, TagManager $tagManager): Response
     {
-        /** @var User $user */
-        $user = $this->getUser();
-        $tag = $this->tagService->initializeNewTag($user);
+        $tag = new Tag('');
         $form = $this->createForm(TagType::class, $tag);
         $form->handleRequest($request);
 
         if ($form->isSubmitted() && $form->isValid()) {
-            $this->tagService->createTag($tag, $user);
+            $tagManager->save($tag);
+            $this->addFlash('success', sprintf('Tag « %s » créé.', $tag->getName()));
 
-            $this->addFlash('success', 'Tag créé avec succès.');
-
-            return $this->redirectToRoute('app_tag_index');
+            return $this->redirectToRoute('app_tags');
         }
 
-        return $this->render('tag/new.html.twig', [
-            'tag' => $tag,
-            'form' => $form,
-        ]);
+        return $this->render('tag/new.html.twig', ['form' => $form]);
     }
 
-    #[Route('/{id}', name: 'app_tag_show', requirements: ['id' => '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'], methods: ['GET'])]
-    public function show(Tag $tag): Response
+    #[Route('/tags/{id}/edit', name: 'app_tag_edit')]
+    public function edit(Tag $tag, Request $request, TagManager $tagManager): Response
     {
-        $this->denyAccessUnlessGranted(TagVoter::VIEW, $tag);
-
-        $stats = $this->tagService->getTagStats($tag);
-        $monthlyTotals = $this->tagService->getMonthlyTotalsForTag($tag);
-
-        return $this->render('tag/show.html.twig', [
-            'tag' => $tag,
-            'stats' => $stats,
-            'monthly_totals' => $monthlyTotals,
-        ]);
-    }
-
-    #[Route('/{id}/edit', name: 'app_tag_edit', requirements: ['id' => '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'], methods: ['GET', 'POST'])]
-    public function edit(Request $request, Tag $tag): Response
-    {
-        $this->denyAccessUnlessGranted(TagVoter::EDIT, $tag);
-
         $form = $this->createForm(TagType::class, $tag);
         $form->handleRequest($request);
 
         if ($form->isSubmitted() && $form->isValid()) {
-            $this->tagService->updateTag($tag);
+            $tagManager->save($tag);
+            $this->addFlash('success', 'Tag renommé.');
 
-            $this->addFlash('success', 'Tag modifié avec succès.');
-
-            return $this->redirectToRoute('app_tag_index');
+            return $this->redirectToRoute('app_tags');
         }
 
         return $this->render('tag/edit.html.twig', [
@@ -96,16 +57,16 @@ class TagController extends AbstractController
         ]);
     }
 
-    #[Route('/{id}', name: 'app_tag_delete', requirements: ['id' => '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'], methods: ['POST'])]
-    public function delete(Request $request, Tag $tag): Response
+    #[Route('/tags/{id}/delete', name: 'app_tag_delete', methods: ['POST'])]
+    public function delete(Tag $tag, Request $request, TagManager $tagManager): Response
     {
-        $this->denyAccessUnlessGranted(TagVoter::DELETE, $tag);
-
-        if ($this->isCsrfTokenValid('delete'.$tag->getId(), $request->getPayload()->getString('_token'))) {
-            $this->tagService->deleteTag($tag);
-            $this->addFlash('success', 'Tag supprimé avec succès.');
+        if (!$this->isCsrfTokenValid('delete'.$tag->getId(), (string) $request->getPayload()->get('_token'))) {
+            throw $this->createAccessDeniedException('Jeton CSRF invalide.');
         }
 
-        return $this->redirectToRoute('app_tag_index');
+        $tagManager->delete($tag);
+        $this->addFlash('success', 'Tag supprimé.');
+
+        return $this->redirectToRoute('app_tags');
     }
 }

@@ -1,0 +1,56 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Import — OnlyFlooze{% endblock %}
+
+{% block body %}
+    <h1 class="h3 mb-4">Import du relevé</h1>
+
+    <div class="card mb-4">
+        <div class="card-body">
+            {{ form_start(form) }}
+                <div class="row g-2 align-items-end">
+                    <div class="col-md-8">
+                        {{ form_row(form.file) }}
+                    </div>
+                    <div class="col-md-4">
+                        <button type="submit" class="btn btn-primary">Importer</button>
+                    </div>
+                </div>
+            {{ form_end(form) }}
+            <small class="text-muted">
+                Format attendu : export CSV de la banque (« Date operation;Date valeur;Libelle;Debit;Credit »).
+                Les exports qui se chevauchent sont gérés : seules les nouvelles lignes sont insérées.
+            </small>
+        </div>
+    </div>
+
+    <h2 class="h5">Derniers imports</h2>
+    <div class="card">
+        <table class="table table-sm mb-0 align-middle">
+            <thead>
+                <tr>
+                    <th class="ps-3">Date</th>
+                    <th>Fichier</th>
+                    <th class="text-end">Nouvelles</th>
+                    <th class="text-end">Doublons ignorés</th>
+                    <th class="text-end">Suggérées</th>
+                    <th class="text-end pe-3">À trier</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for batch in batches %}
+                    <tr>
+                        <td class="ps-3">{{ batch.createdAt|date('d/m/Y H:i') }}</td>
+                        <td>{{ batch.filename }}</td>
+                        <td class="text-end">{{ batch.newCount }}</td>
+                        <td class="text-end">{{ batch.duplicateCount }}</td>
+                        <td class="text-end">{{ batch.suggestedCount }}</td>
+                        <td class="text-end pe-3">{{ batch.toReviewCount }}</td>
+                    </tr>
+                {% else %}
+                    <tr><td colspan="6" class="text-center text-muted py-4">Aucun import pour l'instant.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+{% endblock %}

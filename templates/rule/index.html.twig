@@ -1,0 +1,59 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Règles apprises — OnlyFlooze{% endblock %}
+
+{% block body %}
+    <h1 class="h3 mb-4">Règles apprises</h1>
+
+    <p class="text-muted">
+        Chaque catégorisation manuelle crée ou renforce une règle. Une règle
+        s'applique automatiquement à partir de 2 confirmations ; corrigée, elle
+        retombe en suggestion.
+    </p>
+
+    <div class="card">
+        <table class="table table-sm table-hover align-middle mb-0">
+            <thead>
+                <tr>
+                    <th class="ps-3">Règle</th>
+                    <th>Tokens</th>
+                    <th>Sens</th>
+                    <th>Catégorie</th>
+                    <th>Montant</th>
+                    <th class="text-center">Confiance</th>
+                    <th class="pe-3"></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for rule in rules %}
+                    <tr>
+                        <td class="ps-3">{{ rule.name }}</td>
+                        <td>
+                            {% for token in rule.tokens %}
+                                <span class="badge text-bg-light border">{{ token }}</span>
+                            {% endfor %}
+                        </td>
+                        <td>{{ rule.direction.value == 'debit' ? 'Débit' : 'Crédit' }}</td>
+                        <td>{{ rule.category.fullName }}</td>
+                        <td>{{ rule.amountCents is not null ? rule.amountCents|money : '—' }}</td>
+                        <td class="text-center">
+                            <span class="badge text-bg-success">{{ rule.confirmations }} ✓</span>
+                            {% if rule.corrections > 0 %}
+                                <span class="badge text-bg-danger">{{ rule.corrections }} ✗</span>
+                            {% endif %}
+                        </td>
+                        <td class="pe-3 text-end text-nowrap">
+                            <a class="btn btn-sm btn-outline-secondary" href="{{ path('app_rule_edit', {id: rule.id}) }}">Modifier</a>
+                            <form method="post" action="{{ path('app_rule_delete', {id: rule.id}) }}" class="d-inline" data-turbo-confirm="Supprimer la règle « {{ rule.name }} » ?">
+                                <input type="hidden" name="_token" value="{{ csrf_token('delete' ~ rule.id) }}">
+                                <button type="submit" class="btn btn-sm btn-outline-danger">Supprimer</button>
+                            </form>
+                        </td>
+                    </tr>
+                {% else %}
+                    <tr><td colspan="7" class="text-center text-muted py-4">Aucune règle : elles apparaîtront au fil du tri.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+{% endblock %}

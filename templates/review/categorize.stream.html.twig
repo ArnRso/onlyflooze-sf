@@ -1,0 +1,11 @@
+<turbo-stream action="update" target="review-list">
+    <template>{{ include('review/_list.html.twig') }}</template>
+</turbo-stream>
+
+<turbo-stream action="update" target="review-count">
+    <template>{{ toReviewCount }}</template>
+</turbo-stream>
+
+<turbo-stream action="update" target="nav-review-badge">
+    <template>{{ toReviewCount }}</template>
+</turbo-stream>

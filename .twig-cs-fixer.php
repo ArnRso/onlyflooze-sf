@@ -1,10 +1,9 @@
 <?php
 
-use FriendsOfTwig\Twigcs;
+$finder = (new TwigCsFixer\File\Finder())
+    ->in(__DIR__.'/templates');
 
-$finder = Twigcs\Finder\TemplateFinder::create()
-    ->in(__DIR__ . '/templates');
+$config = new TwigCsFixer\Config\Config();
+$config->setFinder($finder);
 
-return Twigcs\Config\Config::create()
-    ->setFinder($finder)
-    ->setRuleset(Twigcs\Ruleset\Official::class);
+return $config;

@@ -1,0 +1,137 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}{{ recurrence.name }} — OnlyFlooze{% endblock %}
+
+{% block body %}
+    <div class="d-flex align-items-center justify-content-between mb-4">
+        <h1 class="h3 mb-0">Récurrence « {{ recurrence.name }} »</h1>
+        <div class="d-flex gap-2">
+            {% if recurrence.endedAt %}
+                <form method="post" action="{{ path('app_recurrence_resume', {id: recurrence.id}) }}">
+                    <input type="hidden" name="_token" value="{{ csrf_token('resume' ~ recurrence.id) }}">
+                    <button type="submit" class="btn btn-sm btn-outline-success">Reprendre le suivi</button>
+                </form>
+            {% else %}
+                <form method="post" action="{{ path('app_recurrence_end', {id: recurrence.id}) }}" data-turbo-confirm="Marquer « {{ recurrence.name }} » comme terminée ? Elle ne sera plus attendue les mois suivants.">
+                    <input type="hidden" name="_token" value="{{ csrf_token('end' ~ recurrence.id) }}">
+                    <button type="submit" class="btn btn-sm btn-outline-dark">Marquer comme terminée</button>
+                </form>
+            {% endif %}
+            <a class="btn btn-sm btn-outline-secondary" href="{{ path('app_recurrence_edit', {id: recurrence.id}) }}">Modifier</a>
+            <a class="btn btn-sm btn-outline-secondary" href="{{ path('app_recurrences') }}">← Retour</a>
+        </div>
+    </div>
+
+    <div class="card mb-4">
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-3">
+                    <div class="text-muted small">Attendu</div>
+                    <div>~{{ recurrence.expectedAmountCents|money }} le {{ recurrence.expectedDayOfMonth }} (±{{ recurrence.tolerancePct }} %, fenêtre ±{{ recurrence.dayWindow }} j)</div>
+                </div>
+                <div class="col-md-3">
+                    <div class="text-muted small">Catégorie</div>
+                    <div>{{ recurrence.category ? recurrence.category.fullName : '—' }}</div>
+                </div>
+                <div class="col-md-3">
+                    <div class="text-muted small">Règle liée</div>
+                    <div>
+                        {% if recurrence.rule %}
+                            <a href="{{ path('app_rule_edit', {id: recurrence.rule.id}) }}">{{ recurrence.rule.name }}</a>
+                        {% else %}
+                            — (rattachement par date + montant)
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="text-muted small">Ce mois-ci</div>
+                    <div>
+                        {% if status.state.value == 'passed' %}
+                            <span class="badge text-bg-success">Passée</span>
+                        {% elseif status.state.value == 'upcoming' %}
+                            <span class="badge text-bg-secondary">À venir le {{ status.expectedDate|date('d/m') }}</span>
+                        {% elseif status.state.value == 'ended' %}
+                            <span class="badge text-bg-dark">Terminée le {{ recurrence.endedAt|date('d/m/Y') }}</span>
+                        {% elseif status.state.value == 'not_started' %}
+                            <span class="badge text-bg-light text-muted border">Pas encore commencée</span>
+                        {% else %}
+                            <span class="badge text-bg-danger">En retard (attendue le {{ status.expectedDate|date('d/m') }})</span>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {% if candidates is not empty %}
+        <div class="card mb-4 border-primary">
+            <div class="card-header text-bg-primary">
+                Correspondances possibles dans l'historique ({{ candidates|length }}) — à valider ligne par ligne
+            </div>
+            <table class="table table-sm align-middle mb-0">
+                <tbody>
+                    {% for transaction in candidates %}
+                        <tr>
+                            <td class="ps-3 text-nowrap">{{ transaction.operationDate|date('d/m/Y') }}</td>
+                            <td>
+                                {{ transaction.label }}
+                                {% if not recurrence.isAmountWithinTolerance(transaction.amountCents) %}
+                                    <span class="badge text-bg-warning" title="Écart de montant hors tolérance">⚠ écart</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-end text-nowrap {{ transaction.amountCents < 0 ? 'text-danger' : 'text-success' }}">{{ transaction.amountCents|money(true) }}</td>
+                            <td class="text-end pe-3 text-nowrap">
+                                <form method="post" action="{{ path('app_recurrence_attach', {id: recurrence.id, transactionId: transaction.id}) }}" class="d-inline">
+                                    <input type="hidden" name="_token" value="{{ csrf_token('attach' ~ transaction.id) }}">
+                                    <button type="submit" class="btn btn-sm btn-success" title="Rattacher à la récurrence">✓ Rattacher</button>
+                                </form>
+                                <form method="post" action="{{ path('app_recurrence_exclude', {id: recurrence.id, transactionId: transaction.id}) }}" class="d-inline">
+                                    <input type="hidden" name="_token" value="{{ csrf_token('exclude' ~ transaction.id) }}">
+                                    <button type="submit" class="btn btn-sm btn-outline-secondary" title="Ne plus jamais proposer cette ligne">✗ Ignorer</button>
+                                </form>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% endif %}
+
+    <h2 class="h5">Transactions rattachées ({{ transactions|length }})</h2>
+    <div class="card">
+        <table class="table table-sm table-hover align-middle mb-0">
+            <thead>
+                <tr>
+                    <th class="ps-3">Date</th>
+                    <th>Libellé</th>
+                    <th class="text-end">Montant</th>
+                    <th class="text-end">Écart vs attendu</th>
+                    <th class="pe-3"></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for transaction in transactions %}
+                    <tr>
+                        <td class="ps-3 text-nowrap">{{ transaction.operationDate|date('d/m/Y') }}</td>
+                        <td>
+                            {{ transaction.label }}
+                            {% if transaction.amountOutOfTolerance %}
+                                <span class="badge text-bg-warning">⚠ hors tolérance</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-end text-nowrap {{ transaction.amountCents < 0 ? 'text-danger' : 'text-success' }}">{{ transaction.amountCents|money(true) }}</td>
+                        <td class="text-end text-nowrap text-muted">{{ (transaction.amountCents - recurrence.expectedAmountCents)|money(true) }}</td>
+                        <td class="text-end pe-3">
+                            <form method="post" action="{{ path('app_recurrence_detach', {id: recurrence.id, transactionId: transaction.id}) }}" data-turbo-confirm="Détacher cette transaction ? Elle ne sera plus proposée pour cette récurrence.">
+                                <input type="hidden" name="_token" value="{{ csrf_token('detach' ~ transaction.id) }}">
+                                <button type="submit" class="btn btn-sm btn-outline-danger" title="Rattachée par erreur : détacher">Détacher</button>
+                            </form>
+                        </td>
+                    </tr>
+                {% else %}
+                    <tr><td colspan="5" class="text-center text-muted py-4">Aucune transaction rattachée pour l'instant.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+{% endblock %}

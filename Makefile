@@ -21,8 +21,11 @@ php-cs-fixer: ## Check PHP code style with PHP CS Fixer
 php-cs-fixer-fix: ## Fix PHP code style with PHP CS Fixer
 	vendor/bin/php-cs-fixer fix
 
-twigcs: ## Check Twig templates with TwigCS
-	vendor/bin/twigcs templates
+twigcs: ## Check Twig templates with Twig-CS-Fixer
+	vendor/bin/twig-cs-fixer lint templates
+
+twigcs-fix: ## Fix Twig templates with Twig-CS-Fixer
+	vendor/bin/twig-cs-fixer lint --fix templates
 
 eslint: ## Check JavaScript code with ESLint
 	npm run lint:js

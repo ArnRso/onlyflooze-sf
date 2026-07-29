@@ -1,0 +1,18 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Nouvelle catégorie — OnlyFlooze{% endblock %}
+
+{% block body %}
+    <h1 class="h3 mb-4">Nouvelle catégorie</h1>
+
+    <div class="card">
+        <div class="card-body">
+            {{ form_start(form) }}
+                {{ form_row(form.name) }}
+                {{ form_row(form.parent) }}
+                <button type="submit" class="btn btn-primary">Créer</button>
+                <a class="btn btn-outline-secondary" href="{{ path('app_categories') }}">Annuler</a>
+            {{ form_end(form) }}
+        </div>
+    </div>
+{% endblock %}

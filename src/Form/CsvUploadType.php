@@ -2,65 +2,37 @@
 
 namespace App\Form;
 
-use App\Entity\CsvImportProfile;
-use Symfony\Bridge\Doctrine\Form\Type\EntityType;
 use Symfony\Component\Form\AbstractType;
 use Symfony\Component\Form\Extension\Core\Type\FileType;
 use Symfony\Component\Form\FormBuilderInterface;
 use Symfony\Component\OptionsResolver\OptionsResolver;
 use Symfony\Component\Validator\Constraints\File;
-use Symfony\Component\Validator\Constraints\NotBlank;
+use Symfony\Component\Validator\Constraints\NotNull;
 
 /**
- * @extends AbstractType<array{file: mixed, profile: mixed}>
+ * @extends AbstractType<mixed>
  */
 class CsvUploadType extends AbstractType
 {
     public function buildForm(FormBuilderInterface $builder, array $options): void
     {
-        $builder
-            ->add('file', FileType::class, [
-                'label' => 'Fichier CSV',
-                'attr' => [
-                    'class' => 'form-control',
-                    'accept' => '.csv,.txt',
-                ],
-                'constraints' => [
-                    new NotBlank(['message' => 'Veuillez sélectionner un fichier']),
-                    new File([
-                        'maxSize' => '10M',
-                        'mimeTypes' => [
-                            'text/csv',
-                            'text/plain',
-                            'application/csv',
-                            'text/comma-separated-values',
-                            'application/vnd.ms-excel',
-                            'application/octet-stream',
-                        ],
-                        'mimeTypesMessage' => 'Veuillez uploader un fichier CSV valide',
-                    ]),
-                ],
-            ])
-            ->add('profile', EntityType::class, [
-                'class' => CsvImportProfile::class,
-                'choice_label' => 'name',
-                'choice_value' => 'id',
-                'choices' => $options['profiles'],
-                'label' => 'Profil d\'import',
-                'attr' => ['class' => 'form-select'],
-                'placeholder' => 'Sélectionnez un profil',
-                'constraints' => [
-                    new NotBlank(['message' => 'Veuillez sélectionner un profil d\'import']),
-                ],
-            ]);
+        $builder->add('file', FileType::class, [
+            'label' => 'Export CSV de la banque',
+            'constraints' => [
+                new NotNull(message: 'Choisis un fichier CSV.'),
+                new File(
+                    maxSize: '10M',
+                    mimeTypes: ['text/csv', 'text/plain', 'application/csv', 'application/octet-stream'],
+                    mimeTypesMessage: 'Le fichier doit être un CSV.',
+                ),
+            ],
+        ]);
     }
 
     public function configureOptions(OptionsResolver $resolver): void
     {
         $resolver->setDefaults([
-            'profiles' => [],
+            'csrf_protection' => true,
         ]);
-
-        $resolver->setAllowedTypes('profiles', 'array');
     }
 }
