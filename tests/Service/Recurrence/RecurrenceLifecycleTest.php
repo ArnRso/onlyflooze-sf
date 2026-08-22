@@ -194,4 +194,37 @@ class RecurrenceLifecycleTest extends KernelTestCase
         self::assertCount(1, $candidates);
         self::assertSame('2026-04-08', $candidates[0]->getOperationDate()->format('Y-m-d'), 'Seul l\'historique antérieur à la fin est proposé');
     }
+
+    public function testForecastSplitsRemainingIntoDebitAndCredit(): void
+    {
+        // Au 15 du mois : le salaire (3) et le loyer (5) sont passés, le prêt
+        // (25) et la mutuelle (8, en retard) restent à sortir, le
+        // remboursement (20) reste à rentrer.
+        $salaire = new Recurrence('Salaire', Direction::Credit, 3, 250000);
+        $loyer = new Recurrence('Loyer', Direction::Debit, 5, -65000);
+        $pret = new Recurrence('Prêt', Direction::Debit, 25, -27810);
+        $mutuelle = new Recurrence('Mutuelle', Direction::Debit, 8, -7292);
+        $remboursement = new Recurrence('Remboursement', Direction::Credit, 20, 7500);
+        foreach ([$salaire, $loyer, $pret, $mutuelle, $remboursement] as $recurrence) {
+            $this->entityManager->persist($recurrence);
+        }
+        $this->makeAttachedOccurrence($salaire, 'VIR HPG', 252000, '2026-07-03');
+        $this->makeAttachedOccurrence($loyer, 'VIR vers AGENCE', -65000, '2026-07-05');
+        // Les autres ont déjà une occurrence le mois précédent : elles sont attendues.
+        $this->makeAttachedOccurrence($pret, 'ECH PRET 0545773921701', -27810, '2026-06-25');
+        $this->makeAttachedOccurrence($mutuelle, 'PRLV RADIANCE MUTUELLE', -7292, '2026-06-08');
+        $this->makeAttachedOccurrence($remboursement, 'VIR RADIANCE', 7500, '2026-06-20');
+        $this->entityManager->flush();
+
+        $provider = $this->statusProvider('2026-07-15');
+        $forecast = $provider->forecastForMonth(new \DateTimeImmutable('2026-07-01'));
+
+        self::assertSame(252000, $forecast->passedCreditCents, 'Le montant réel, pas l\'attendu');
+        self::assertSame(-65000, $forecast->passedDebitCents);
+        self::assertSame(-27810 + -7292, $forecast->remainingDebitCents, 'À venir + en retard');
+        self::assertSame(2, $forecast->remainingDebitCount);
+        self::assertSame(7500, $forecast->remainingCreditCents);
+        self::assertSame(1, $forecast->remainingCreditCount);
+        self::assertSame(-27810 + -7292 + 7500, $forecast->getRemainingCents());
+    }
 }
