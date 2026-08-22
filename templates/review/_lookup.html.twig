@@ -1,0 +1,31 @@
+<turbo-frame id="classified-lookup">
+    {% if result %}
+        <div class="card mb-4 border-info">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span>Déjà trié pour « {{ result.query }} » : <strong>{{ result.total }}</strong> transaction(s)</span>
+                <a href="{{ path('app_review_lookup') }}" class="btn btn-sm btn-link p-0" title="Fermer">✕</a>
+            </div>
+            {% if result.total > 0 %}
+                <div class="card-body py-2 d-flex flex-wrap gap-2">
+                    {% for row in result.byCategory %}
+                        <span class="badge text-bg-light border fs-6 fw-normal">{{ row.category }} <strong>× {{ row.count }}</strong></span>
+                    {% endfor %}
+                </div>
+                <table class="table table-sm mb-0">
+                    <tbody>
+                        {% for transaction in result.recent %}
+                            <tr>
+                                <td class="ps-3 text-nowrap">{{ transaction.operationDate|date('d/m/Y') }}</td>
+                                <td>{{ transaction.label }}</td>
+                                <td class="text-end text-nowrap {{ transaction.amountCents < 0 ? 'text-danger' : 'text-success' }}">{{ transaction.amountCents|money(true) }}</td>
+                                <td class="pe-3">{{ transaction.category ? transaction.category.fullName }} <small class="text-muted">· {{ transaction.nature.label }}</small></td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            {% else %}
+                <div class="card-body text-muted">Rien de trié avec ce libellé pour l'instant.</div>
+            {% endif %}
+        </div>
+    {% endif %}
+</turbo-frame>

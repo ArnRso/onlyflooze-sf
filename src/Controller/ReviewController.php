@@ -7,6 +7,7 @@ use App\Entity\Transaction;
 use App\Enum\TransactionNature;
 use App\Repository\CategoryRepository;
 use App\Repository\TransactionRepository;
+use App\Service\Review\ClassifiedLookup;
 use App\Service\Review\RuleReapplier;
 use App\Service\Review\TransactionCategorizer;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -24,6 +25,14 @@ class ReviewController extends AbstractController
             'transactions' => $transactionRepository->findToReview(100),
             'toReviewCount' => $transactionRepository->countToReview(),
             'categories' => $categoryRepository->findAllOrdered(),
+        ]);
+    }
+
+    #[Route('/review/lookup', name: 'app_review_lookup', methods: ['GET'])]
+    public function lookup(Request $request, ClassifiedLookup $lookup): Response
+    {
+        return $this->render('review/_lookup.html.twig', [
+            'result' => $lookup->lookup((string) $request->query->get('q', '')),
         ]);
     }
 
