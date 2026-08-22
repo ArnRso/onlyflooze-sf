@@ -16,7 +16,8 @@ use Doctrine\ORM\EntityManagerInterface;
  * suggestions pré-remplies — jamais de catégorisation automatique.
  *
  * Seuls les niveaux 1-3 de la cascade (règles) sont rejoués : la périodicité
- * reste du ressort de l'import.
+ * reste du ressort de l'import. Une suggestion issue d'une règle qui ne
+ * matche plus (règle nettoyée, modifiée, supprimée) est retirée.
  */
 class RuleReapplier
 {
@@ -29,8 +30,8 @@ class RuleReapplier
     }
 
     /**
-     * Retourne le nombre de transactions dont la suggestion a été posée ou
-     * mise à jour.
+     * Retourne le nombre de transactions dont la suggestion a été posée,
+     * mise à jour ou retirée.
      */
     public function reapply(): int
     {
@@ -54,6 +55,13 @@ class RuleReapplier
             }
 
             if (!$match->isMatch() || $match->category === null) {
+                // Les suggestions sans règle (périodicité, remboursement)
+                // ne sont pas remises en cause ici.
+                if ($transaction->getMatchedRule() !== null) {
+                    $transaction->setSuggestedCategory(null);
+                    $transaction->setMatchedRule(null);
+                    ++$updated;
+                }
                 continue;
             }
 

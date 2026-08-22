@@ -2,6 +2,7 @@
 
 namespace App\Repository;
 
+use App\Dto\CorpusEntry;
 use App\Entity\Category;
 use App\Entity\Recurrence;
 use App\Entity\Transaction;
@@ -234,24 +235,51 @@ class TransactionRepository extends ServiceEntityRepository
     }
 
     /**
-     * Nombre de transactions dont les tokens contiennent le token donné
-     * (mesure de sélectivité : un token trop fréquent ne discrimine rien).
+     * Tout le corpus vu par l'analyse de sélectivité des tokens : les tokens
+     * de chaque transaction et, pour celles triées à la main, la catégorie.
+     *
+     * @return list<CorpusEntry>
      */
-    public function countWithToken(string $token): int
+    public function findCorpusEntries(): array
     {
-        $sql = 'SELECT count(*) FROM bank_transaction WHERE jsonb_exists(tokens::jsonb, :token)';
+        $sql = 'SELECT tokens, CASE WHEN category_source = :manual THEN category_id END AS category_key FROM bank_transaction';
 
-        return (int) $this->getEntityManager()->getConnection()
-            ->executeQuery($sql, ['token' => $token])
-            ->fetchOne();
+        /** @var list<array{tokens: string, category_key: string|null}> $rows */
+        $rows = $this->getEntityManager()->getConnection()
+            ->executeQuery($sql, ['manual' => CategorySource::Manual->value])
+            ->fetchAllAssociative();
+
+        return array_map(
+            static fn (array $row): CorpusEntry => new CorpusEntry(
+                array_values(array_map(strval(...), (array) json_decode($row['tokens'], true))),
+                $row['category_key'],
+            ),
+            $rows,
+        );
     }
 
-    public function countAll(): int
+    /**
+     * Sort des suggestions (acceptée / corrigée / absente) par mois de tri.
+     *
+     * @return list<array{month: string, outcome: string, cnt: int}>
+     */
+    public function countReviewOutcomesByMonth(): array
     {
-        return (int) $this->createQueryBuilder('t')
-            ->select('COUNT(t.id)')
-            ->getQuery()
-            ->getSingleScalarResult();
+        $sql = <<<'SQL'
+            SELECT to_char(reviewed_at, 'YYYY-MM') AS month, suggestion_outcome AS outcome, count(*) AS cnt
+            FROM bank_transaction
+            WHERE reviewed_at IS NOT NULL AND suggestion_outcome IS NOT NULL
+            GROUP BY 1, 2
+            ORDER BY 1
+            SQL;
+
+        /** @var list<array{month: string, outcome: string, cnt: int|string}> $rows */
+        $rows = $this->getEntityManager()->getConnection()->executeQuery($sql)->fetchAllAssociative();
+
+        return array_map(
+            static fn (array $row): array => ['month' => $row['month'], 'outcome' => $row['outcome'], 'cnt' => (int) $row['cnt']],
+            $rows,
+        );
     }
 
     /**

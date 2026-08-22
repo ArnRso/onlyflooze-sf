@@ -26,4 +26,14 @@ final readonly class NormalizedLabel
     {
         return $this->type->value.'|'.implode(' ', $this->tokens);
     }
+
+    /**
+     * @return list<string>
+     */
+    public static function tokensFromFingerprint(string $fingerprint): array
+    {
+        $tokens = explode('|', $fingerprint, 2)[1] ?? '';
+
+        return $tokens === '' ? [] : explode(' ', $tokens);
+    }
 }

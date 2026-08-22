@@ -2,8 +2,10 @@
 
 namespace App\Tests\Service\Matching;
 
+use App\Entity\CategorizationRule;
 use App\Entity\Category;
 use App\Entity\Transaction;
+use App\Enum\Direction;
 use App\Enum\TransactionNature;
 use App\Service\Matching\RuleLearner;
 use App\Service\Normalization\LabelNormalizer;
@@ -51,7 +53,7 @@ class RuleQualityTest extends KernelTestCase
         $rule = $this->learner->learnFromCategorization($first, $restos);
         $this->learner->learnFromCategorization($second, $restos);
 
-        self::assertSame(['RESTO', 'DU', 'COIN'], $rule->getTokens(), 'Le narrowing vers [DU] est refusé');
+        self::assertSame(['RESTO', 'COIN'], $rule->getTokens(), 'Le mot-outil n\'est jamais retenu ; le narrowing vers [DU] est refusé');
     }
 
     public function testRuleNeverDegeneratesToUbiquitousToken(): void
@@ -72,7 +74,72 @@ class RuleQualityTest extends KernelTestCase
         $rule = $this->learner->learnFromCategorization($first, $restos);
         $this->learner->learnFromCategorization($second, $restos);
 
-        self::assertSame(['TCHU', 'BORDEAUX'], $rule->getTokens(), 'Le narrowing vers [BORDEAUX] est refusé');
+        self::assertSame(['TCHU'], $rule->getTokens(), 'La ville n\'est jamais retenue ; le narrowing vers [BORDEAUX] est refusé');
+    }
+
+    public function testRuleIsNeverCreatedOnACityToken(): void
+    {
+        // Cas réel : BEGLES en queue de nombreux libellés distincts est une
+        // ville. Trier « MOSTO BEGLES » doit produire [MOSTO], pas [MOSTO,
+        // BEGLES] qui se resserrerait en [BEGLES] au premier voisin.
+        $restos = new Category('Restos & sorties');
+        $this->entityManager->persist($restos);
+
+        foreach (['PHARMACIE CENTRALE BEGLES', 'BOUL PAUL BEGLES', 'LIDL BEGLES', 'MGP*JESTOCKE Begles', 'TOTAL BEGLES'] as $merchant) {
+            $this->makeTransaction('CARTE 01/07 '.$merchant, -1000);
+        }
+        $this->entityManager->flush();
+
+        $rule = $this->learner->learnFromCategorization($this->makeTransaction('CARTE 03/07 MOSTO BEGLES', -2500), $restos);
+
+        self::assertSame(['MOSTO'], $rule->getTokens());
+    }
+
+    public function testLabelWithoutDiscriminantTokenGivesAnExactOnlyRule(): void
+    {
+        $divers = new Category('Divers');
+        $this->entityManager->persist($divers);
+
+        for ($i = 0; $i < 40; ++$i) {
+            $this->makeTransaction(sprintf('CARTE 01/07 COMMERCE%d BORDEAUX', $i), -1000);
+        }
+        $this->entityManager->flush();
+
+        $transaction = $this->makeTransaction('CARTE 03/07 BORDEAUX', -500);
+        $rule = $this->learner->learnFromCategorization($transaction, $divers);
+
+        self::assertSame([], $rule->getTokens(), 'Aucun token : la règle ne matche qu\'à l\'empreinte exacte');
+        self::assertSame('CARTE 03/07 BORDEAUX', $rule->getName());
+        self::assertCount(1, $rule->getFingerprints());
+
+        // Retrier le même libellé renforce cette règle plutôt que d'en créer
+        // une autre identique.
+        $again = $this->makeTransaction('CARTE 05/07 BORDEAUX', -700);
+        self::assertSame($rule, $this->learner->learnFromCategorization($again, $divers));
+    }
+
+    public function testConfirmingAnExactOnlyRuleOnADiscriminantLabelLearnsARealRule(): void
+    {
+        // Une règle rétrogradée en « empreintes seules » ne doit pas être une
+        // impasse : valider un libellé discriminant crée une vraie règle.
+        $restos = new Category('Restos & sorties');
+        $this->entityManager->persist($restos);
+
+        $exactOnly = new CategorizationRule('CARTE MOSTO BEGLES', $restos, Direction::Debit);
+        $exactOnly->setTokens([]);
+        $exactOnly->addFingerprint($this->normalizer->normalize('CARTE 01/07 MOSTO BEGLES')->getFingerprint());
+        $this->entityManager->persist($exactOnly);
+        $this->entityManager->flush();
+
+        $transaction = $this->makeTransaction('CARTE 01/07 MOSTO BEGLES', -2500);
+        $transaction->setSuggestedCategory($restos);
+        $transaction->setMatchedRule($exactOnly);
+
+        $rule = $this->learner->confirmSuggestion($transaction);
+
+        self::assertNotNull($rule);
+        self::assertNotSame($exactOnly, $rule);
+        self::assertSame(['MOSTO', 'BEGLES'], $rule->getTokens());
     }
 
     public function testNarrowingToDiscriminantTokenStillWorks(): void

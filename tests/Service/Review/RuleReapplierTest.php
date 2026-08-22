@@ -4,6 +4,7 @@ namespace App\Tests\Service\Review;
 
 use App\Entity\Category;
 use App\Enum\CategorySource;
+use App\Repository\CategorizationRuleRepository;
 use App\Repository\TransactionRepository;
 use App\Service\Import\TransactionImporter;
 use App\Service\Review\RuleReapplier;
@@ -128,6 +129,55 @@ class RuleReapplierTest extends KernelTestCase
             'CARTE 04/05 CHRONO 1010 BOULIAC',
             'CARTE 07/06 CHRONO 1006 LE HAILLAN',
         ], $this->suggestedLabels());
+    }
+
+    public function testSuggestionFromARuleThatNoLongerMatchesIsCleared(): void
+    {
+        $courses = new Category('Courses');
+        $this->entityManager->persist($courses);
+        $this->entityManager->flush();
+
+        $this->importBacklog();
+
+        foreach ($this->transactionRepository->findAllToReview() as $transaction) {
+            if (str_contains($transaction->getLabel(), '19/07 CHRONO 1010')) {
+                $this->categorizer->categorize($transaction, $courses);
+                break;
+            }
+        }
+        self::assertSame(['CARTE 04/05 CHRONO 1010 BOULIAC'], $this->suggestedLabels());
+
+        // La règle est élargie à [CHRONO] : le magasin du Haillan est suggéré.
+        $rule = static::getContainer()->get(CategorizationRuleRepository::class)->findAll()[0];
+        $rule->setTokens(['CHRONO']);
+        $this->entityManager->flush();
+        self::assertSame(1, $this->reapplier->reapply());
+        self::assertSame(['CARTE 04/05 CHRONO 1010 BOULIAC', 'CARTE 11/06 CHRONO 1006 LE HAILLAN'], $this->suggestedLabels());
+
+        // Puis modifiée (à la main ou par consolidation) vers un token qui ne
+        // couvre plus le Haillan : sa suggestion est retirée. Le jumeau exact
+        // reste suggéré par son empreinte.
+        $rule->setTokens(['AUTRECHOSE']);
+        $this->entityManager->flush();
+        self::assertSame(1, $this->reapplier->reapply());
+        self::assertSame(['CARTE 04/05 CHRONO 1010 BOULIAC'], $this->suggestedLabels());
+    }
+
+    public function testSuggestionWithoutRuleIsLeftAlone(): void
+    {
+        // Périodicité / remboursement : pas de règle derrière, la
+        // réapplication n'a pas à les remettre en cause.
+        $courses = new Category('Courses');
+        $this->entityManager->persist($courses);
+        $this->entityManager->flush();
+
+        $this->importBacklog();
+        $transaction = $this->transactionRepository->findAllToReview()[0];
+        $transaction->setSuggestedCategory($courses);
+        $this->entityManager->flush();
+
+        self::assertSame(0, $this->reapplier->reapply());
+        self::assertSame($courses, $transaction->getSuggestedCategory());
     }
 
     public function testReapplyIsIdempotent(): void

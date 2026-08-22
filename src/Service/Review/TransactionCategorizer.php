@@ -5,6 +5,7 @@ namespace App\Service\Review;
 use App\Entity\Category;
 use App\Entity\Transaction;
 use App\Enum\CategorySource;
+use App\Enum\SuggestionOutcome;
 use App\Enum\TransactionNature;
 use App\Service\Matching\RuleLearner;
 use Doctrine\ORM\EntityManagerInterface;
@@ -45,6 +46,14 @@ class TransactionCategorizer
         }
         $transaction->setMatchedRule($rule ?? $transaction->getMatchedRule());
 
+        // Le sort de la suggestion est mémorisé avant de l'effacer : c'est ce
+        // qui permet de mesurer la précision du moteur dans le temps.
+        $transaction->recordReviewOutcome(match (true) {
+            $transaction->getSuggestedCategory() === null => SuggestionOutcome::None,
+            $transaction->getSuggestedCategory() === $category => SuggestionOutcome::Accepted,
+            default => SuggestionOutcome::Corrected,
+        });
+
         $transaction->setCategory($category);
         $transaction->setCategorySource(CategorySource::Manual);
         $transaction->setSuggestedCategory(null);
@@ -61,6 +70,7 @@ class TransactionCategorizer
     {
         $transaction->setCategory(null);
         $transaction->setCategorySource(CategorySource::Unclassified);
+        $transaction->clearReviewOutcome();
 
         $this->entityManager->flush();
     }
