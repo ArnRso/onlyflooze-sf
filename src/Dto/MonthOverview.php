@@ -21,13 +21,13 @@ final readonly class MonthOverview
         public int $netCents,
         public int $toReviewCount,
         public array $recurrenceStatuses,
-        public int $remainingRecurrencesCents,
+        public RecurrenceForecast $recurrenceForecast,
         public Chart $historyChart,
     ) {
     }
 
     public function getEstimatedEndOfMonthCents(): int
     {
-        return $this->netCents + $this->remainingRecurrencesCents;
+        return $this->netCents + $this->recurrenceForecast->getRemainingCents();
     }
 }

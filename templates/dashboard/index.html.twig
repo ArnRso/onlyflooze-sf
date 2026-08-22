@@ -54,6 +54,28 @@
         </div>
     </div>
 
+    {% set forecast = overview.recurrenceForecast %}
+    <div class="row g-3 mb-4">
+        <div class="col-6 col-lg-3">
+            <div class="card border-danger-subtle">
+                <div class="card-body">
+                    <div class="text-muted small">Reste à sortir <abbr title="Récurrences de dépense à venir ou en retard ce mois-ci">ⓘ</abbr></div>
+                    <div class="fs-4 text-danger">{{ forecast.remainingDebitCents|money }}</div>
+                    <div class="small text-muted">{{ forecast.remainingDebitCount }} récurrence(s) · déjà passé {{ forecast.passedDebitCents|money }}</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-lg-3">
+            <div class="card border-success-subtle">
+                <div class="card-body">
+                    <div class="text-muted small">Reste à rentrer <abbr title="Récurrences de revenu à venir ou en retard ce mois-ci">ⓘ</abbr></div>
+                    <div class="fs-4 text-success">{{ forecast.remainingCreditCents|money }}</div>
+                    <div class="small text-muted">{{ forecast.remainingCreditCount }} récurrence(s) · déjà passé {{ forecast.passedCreditCents|money }}</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <div class="row g-4">
         <div class="col-lg-6">
             <div class="card h-100">

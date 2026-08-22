@@ -4,6 +4,7 @@ namespace App\Service\Dashboard;
 
 use App\Dto\CategoryMonthTotal;
 use App\Dto\MonthOverview;
+use App\Dto\RecurrenceForecast;
 use App\Entity\Category;
 use App\Entity\Transaction;
 use App\Repository\TransactionRepository;
@@ -33,6 +34,7 @@ class DashboardService
     {
         $transactions = $this->budgetedTransactions($month);
         $previousTransactions = $this->budgetedTransactions($month->modify('first day of previous month'));
+        $statuses = $this->recurrenceStatusProvider->forMonth($month);
 
         $expense = 0;
         $income = 0;
@@ -51,8 +53,8 @@ class DashboardService
             $income,
             $expense + $income,
             $this->transactionRepository->countToReview(),
-            $this->recurrenceStatusProvider->forMonth($month),
-            $this->recurrenceStatusProvider->remainingAmountCentsForMonth($month),
+            $statuses,
+            RecurrenceForecast::fromStatuses($statuses),
             $this->buildHistoryChart($month),
         );
     }

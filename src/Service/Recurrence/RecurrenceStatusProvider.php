@@ -2,6 +2,7 @@
 
 namespace App\Service\Recurrence;
 
+use App\Dto\RecurrenceForecast;
 use App\Dto\RecurrenceMonthStatus;
 use App\Entity\Recurrence;
 use App\Enum\RecurrenceState;
@@ -78,19 +79,21 @@ class RecurrenceStatusProvider
     }
 
     /**
+     * Déjà passé / reste à sortir / reste à rentrer sur le mois, d'après les
+     * récurrences (sert au reste-à-vivre du dashboard).
+     */
+    public function forecastForMonth(\DateTimeImmutable $month): RecurrenceForecast
+    {
+        return RecurrenceForecast::fromStatuses($this->forMonth($month));
+    }
+
+    /**
      * Montant total restant à passer sur le mois (récurrences à venir ou en
-     * retard), en centimes signés — sert au reste-à-vivre du dashboard.
+     * retard), en centimes signés.
      */
     public function remainingAmountCentsForMonth(\DateTimeImmutable $month): int
     {
-        $total = 0;
-        foreach ($this->forMonth($month) as $status) {
-            if ($status->state === RecurrenceState::Upcoming || $status->state === RecurrenceState::Late) {
-                $total += $status->recurrence->getExpectedAmountCents();
-            }
-        }
-
-        return $total;
+        return $this->forecastForMonth($month)->getRemainingCents();
     }
 
     private function expectedDateForMonth(Recurrence $recurrence, \DateTimeImmutable $month): \DateTimeImmutable
