@@ -367,6 +367,60 @@ class RecurrenceFlowTest extends KernelTestCase
         self::assertSame(-6988, $recurrence->getExpectedAmountCents(), 'L\'attendu suit la normale, pas l\'anomalie');
     }
 
+    public function testTwoConsecutiveOccurrencesAtANewLevelAreAdoptedAsTheNewNormal(): void
+    {
+        // Cas réel : EDF 84,09 → 100,13 → 100,13. Le premier mois est signalé
+        // (anomalie possible), le second confirme un palier : plus rien n'est
+        // signalé et l'attendu suit — sinon chaque mois resterait « hors
+        // tolérance » face à un attendu figé.
+        [$logement, $rule] = $this->makeEdfRule();
+        $recurrence = new Recurrence('EDF', Direction::Debit, 21, -8409);
+        $recurrence->setCategory($logement);
+        $recurrence->setRule($rule);
+        $this->entityManager->persist($recurrence);
+        $this->entityManager->flush();
+
+        $header = '"Date operation";"Date valeur";"Libelle";"Debit";"Credit"';
+        $this->importer->import(implode("\n", [$header, '"21/01/2025";"21/01/2025";"PRLV EDF clients particuliers";"100,13";""']), 'jan.csv');
+
+        $january = $this->transactionRepository->findAll()[0];
+        self::assertTrue($january->isAmountOutOfTolerance(), 'Premier mois : signalé');
+        self::assertSame(-8409, $recurrence->getExpectedAmountCents());
+
+        $this->importer->import(implode("\n", [$header, '"21/02/2025";"21/02/2025";"PRLV EDF clients particuliers";"100,13";""']), 'feb.csv');
+
+        $byDate = [];
+        foreach ($this->transactionRepository->findAll() as $transaction) {
+            $byDate[$transaction->getOperationDate()->format('Y-m')] = $transaction;
+        }
+        self::assertFalse($byDate['2025-02']->isAmountOutOfTolerance(), 'Second mois au même niveau : nouveau palier');
+        self::assertFalse($byDate['2025-01']->isAmountOutOfTolerance(), 'Le signalement du premier mois s\'efface');
+        self::assertSame(-10013, $recurrence->getExpectedAmountCents(), 'L\'attendu adopte le palier');
+    }
+
+    public function testRecurrenceLearnsAChangedLabel(): void
+    {
+        // Le libellé change complètement : le premier mois est rattaché par
+        // date + montant ; dès lors la récurrence connaît ce libellé et le
+        // reconnaît même si le montant bouge le mois suivant.
+        $logement = new Category('Logement');
+        $this->entityManager->persist($logement);
+        $recurrence = new Recurrence('Eau', Direction::Debit, 10, -3100);
+        $recurrence->setCategory($logement);
+        $recurrence->setTokens(['REGIE', 'EAU']);
+        $this->entityManager->persist($recurrence);
+        $this->entityManager->flush();
+
+        $header = '"Date operation";"Date valeur";"Libelle";"Debit";"Credit"';
+        $this->importer->import(implode("\n", [$header, '"10/06/2026";"10/06/2026";"PRLV SUEZ EAU FRANCE";"31,00";""']), 'jun.csv');
+        self::assertContains('prelevement|SUEZ EAU FRANCE', $recurrence->getFingerprints(), 'Le nouveau libellé est appris');
+
+        $this->importer->import(implode("\n", [$header, '"10/07/2026";"10/07/2026";"PRLV SUEZ EAU FRANCE";"45,00";""']), 'jul.csv');
+
+        $attached = array_filter($this->transactionRepository->findAll(), static fn (Transaction $t): bool => $t->getRecurrence() !== null);
+        self::assertCount(2, $attached, 'Reconnu par son libellé appris malgré le montant hors tolérance');
+    }
+
     public function testRecurrenceWithoutRuleMatchesOnDateAndAmountWindow(): void
     {
         // Création manuelle a priori : pas de règle, fenêtre date + tolérance.

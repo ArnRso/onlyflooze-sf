@@ -2,6 +2,7 @@
 
 namespace App\Service\Recurrence;
 
+use App\Dto\NormalizedLabel;
 use App\Entity\Recurrence;
 use App\Entity\Transaction;
 use App\Enum\Direction;
@@ -72,6 +73,7 @@ class RecurrenceBackfill
     public function attach(Recurrence $recurrence, Transaction $transaction): void
     {
         $transaction->setRecurrence($recurrence);
+        $recurrence->addFingerprint((new NormalizedLabel($transaction->getType(), $transaction->getTokens()))->getFingerprint());
 
         if ($transaction->getCategory() === null && $recurrence->getCategory() !== null) {
             $transaction->setSuggestedCategory($transaction->getSuggestedCategory() ?? $recurrence->getCategory());

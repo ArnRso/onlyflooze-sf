@@ -80,6 +80,16 @@ class Recurrence
     #[ORM\Column(type: 'json')]
     private array $excludedTransactionIds = [];
 
+    /**
+     * Empreintes normalisées des libellés déjà rattachés : la récurrence
+     * reconnaît ainsi un libellé qui a changé (rattaché une première fois par
+     * date + montant ou par l'utilisateur) même si le montant bouge ensuite.
+     *
+     * @var list<string>
+     */
+    #[ORM\Column(type: 'json')]
+    private array $fingerprints = [];
+
     #[ORM\Column]
     private \DateTimeImmutable $createdAt;
 
@@ -241,6 +251,23 @@ class Recurrence
     public function isEndedForMonth(\DateTimeImmutable $month): bool
     {
         return $this->endedAt !== null && $month->modify('first day of this month')->setTime(0, 0) > $this->endedAt;
+    }
+
+    /**
+     * @return list<string>
+     */
+    public function getFingerprints(): array
+    {
+        return $this->fingerprints;
+    }
+
+    public function addFingerprint(string $fingerprint): static
+    {
+        if (!\in_array($fingerprint, $this->fingerprints, true)) {
+            $this->fingerprints[] = $fingerprint;
+        }
+
+        return $this;
     }
 
     public function isTransactionExcluded(Transaction $transaction): bool
