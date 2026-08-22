@@ -462,6 +462,17 @@ class RecurrenceFlowTest extends KernelTestCase
         $transaction = new Transaction($operationDate, $operationDate, 'PRLV EDF clients particuliers', -8400, \App\Enum\TransactionType::Prelevement);
         $transaction->setRecurrence($passed);
         $this->entityManager->persist($transaction);
+
+        // Une récurrence n'est attendue qu'à partir de sa première occurrence
+        // (ou de sa création, qui est « aujourd'hui » en test) : une
+        // occurrence en juin rend Prêt et Mutuelle attendues en juillet, quel
+        // que soit le jour où le test tourne.
+        foreach ([[$upcoming, '2026-06-25', -55000], [$late, '2026-06-08', -4200]] as [$recurrence, $date, $amount]) {
+            $previousDate = new \DateTimeImmutable($date);
+            $previous = new Transaction($previousDate, $previousDate, 'PRLV '.$recurrence->getName(), $amount, \App\Enum\TransactionType::Prelevement);
+            $previous->setRecurrence($recurrence);
+            $this->entityManager->persist($previous);
+        }
         $this->entityManager->flush();
 
         $provider = new RecurrenceStatusProvider(
