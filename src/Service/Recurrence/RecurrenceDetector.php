@@ -2,6 +2,7 @@
 
 namespace App\Service\Recurrence;
 
+use App\Dto\NormalizedLabel;
 use App\Dto\RecurrenceSuggestion;
 use App\Entity\Category;
 use App\Entity\Recurrence;
@@ -106,6 +107,7 @@ class RecurrenceDetector
         foreach ($suggestion->transactions as $transaction) {
             $transaction->setRecurrence($recurrence);
             $transaction->setAmountOutOfTolerance(false);
+            $recurrence->addFingerprint((new NormalizedLabel($transaction->getType(), $transaction->getTokens()))->getFingerprint());
         }
 
         $this->entityManager->flush();

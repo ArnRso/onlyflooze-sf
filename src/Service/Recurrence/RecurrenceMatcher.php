@@ -13,10 +13,12 @@ use App\Service\Matching\MatchingEngine;
  * Rattachement transaction ↔ récurrence, à l'import.
  *
  * Réutilise la cascade de matching sur la règle de la récurrence, puis ses
- * propres tokens ; à défaut, fenêtre de date + tolérance de montant. Un
- * écart de montant hors tolérance ne bloque pas le rattachement : la
- * transaction est rattachée mais SIGNALÉE (cas réel : DGFIP passé de 242 €
- * à 2 278 €).
+ * libellés appris et ses propres tokens ; à défaut, fenêtre de date +
+ * tolérance de montant. Un écart de montant hors tolérance ne bloque pas le
+ * rattachement : la transaction est rattachée mais SIGNALÉE (cas réel :
+ * DGFIP passé de 242 € à 2 278 €) — sauf s'il se confirme le mois suivant,
+ * auquel cas c'est un nouveau palier. Chaque rattachement apprend le
+ * libellé à la récurrence.
  */
 class RecurrenceMatcher
 {
@@ -43,12 +45,20 @@ class RecurrenceMatcher
             }
 
             $transaction->setRecurrence($recurrence);
-            $transaction->setAmountOutOfTolerance(!$recurrence->isAmountWithinTolerance($transaction->getAmountCents()));
+            $recurrence->addFingerprint((new NormalizedLabel($transaction->getType(), $transaction->getTokens()))->getFingerprint());
 
             if ($transaction->getCategory() === null && $recurrence->getCategory() !== null) {
                 $transaction->setSuggestedCategory($transaction->getSuggestedCategory() ?? $recurrence->getCategory());
             }
 
+            $previous = $this->transactionRepository->findLatestByRecurrence($recurrence, 1)[0] ?? null;
+            if ($previous !== null && $this->confirmsNewLevel($recurrence, $transaction, $previous)) {
+                $this->adoptNewLevel($recurrence, $transaction, $previous);
+
+                return;
+            }
+
+            $transaction->setAmountOutOfTolerance(!$recurrence->isAmountWithinTolerance($transaction->getAmountCents()));
             $this->refreshExpectedAmount($recurrence, $transaction);
 
             return;
@@ -97,12 +107,11 @@ class RecurrenceMatcher
             return true;
         }
 
-        // Tokens propres à la récurrence (promotion sans règle, création
-        // manuelle) : même garantie que la règle, sauf si plusieurs
-        // récurrences se partagent ce libellé (agrégateur) — le montant
-        // départage alors.
-        if ($this->tokensMatch($recurrence, $label)) {
-            if ($this->sharesTokensWithAnotherRecurrence($recurrence)) {
+        // Libellés appris et tokens propres à la récurrence : même garantie
+        // que la règle, sauf si plusieurs récurrences se partagent ce libellé
+        // (agrégateur) — le montant départage alors.
+        if ($this->fingerprintMatches($recurrence, $label) || $this->tokensMatch($recurrence, $label)) {
+            if ($this->sharesLabelWithAnotherRecurrence($recurrence, $label)) {
                 return $recurrence->isAmountCloseTo($transaction->getAmountCents(), $reference);
             }
 
@@ -130,6 +139,7 @@ class RecurrenceMatcher
         $label = new NormalizedLabel($transaction->getType(), $transaction->getTokens());
 
         return ($recurrence->getRule() !== null && $this->ruleMatches($recurrence, $label, $transaction->getAmountCents()))
+            || $this->fingerprintMatches($recurrence, $label)
             || $this->tokensMatch($recurrence, $label);
     }
 
@@ -152,18 +162,45 @@ class RecurrenceMatcher
         return $recurrence->getTokens() !== [] && array_diff($recurrence->getTokens(), $label->tokens) === [];
     }
 
-    private function sharesTokensWithAnotherRecurrence(Recurrence $recurrence): bool
+    private function fingerprintMatches(Recurrence $recurrence, NormalizedLabel $label): bool
+    {
+        return \in_array($label->getFingerprint(), $recurrence->getFingerprints(), true);
+    }
+
+    private function sharesLabelWithAnotherRecurrence(Recurrence $recurrence, NormalizedLabel $label): bool
     {
         foreach ($this->getActiveRecurrences() as $other) {
-            if ($other !== $recurrence
-                && $other->getDirection() === $recurrence->getDirection()
-                && $other->getTokens() !== []
-                && array_diff($other->getTokens(), $recurrence->getTokens()) === []) {
+            if ($other === $recurrence || $other->getDirection() !== $recurrence->getDirection()) {
+                continue;
+            }
+            if ($this->fingerprintMatches($other, $label) || $this->tokensMatch($other, $label)) {
                 return true;
             }
         }
 
         return false;
+    }
+
+    /**
+     * Deux occurrences consécutives hors tolérance mais proches l'une de
+     * l'autre : ce n'est pas une anomalie, c'est un nouveau palier (cas
+     * réel : EDF 84,09 → 100,13 → 100,13). Sans cette règle, l'attendu
+     * resterait figé à l'ancien niveau et chaque mois serait signalé.
+     */
+    private function confirmsNewLevel(Recurrence $recurrence, Transaction $transaction, Transaction $previous): bool
+    {
+        return $previous->isAmountOutOfTolerance()
+            && !$recurrence->isAmountWithinTolerance($transaction->getAmountCents())
+            && $recurrence->isAmountCloseTo($transaction->getAmountCents(), $previous->getAmountCents());
+    }
+
+    private function adoptNewLevel(Recurrence $recurrence, Transaction $transaction, Transaction $previous): void
+    {
+        $previous->setAmountOutOfTolerance(false);
+        $transaction->setAmountOutOfTolerance(false);
+
+        $recurrence->setExpectedAmountCents((int) round(($previous->getAmountCents() + $transaction->getAmountCents()) / 2));
+        $recurrence->setExpectedDayOfMonth((int) $transaction->getOperationDate()->format('j'));
     }
 
     private function isWithinDateWindow(Recurrence $recurrence, \DateTimeImmutable $date): bool

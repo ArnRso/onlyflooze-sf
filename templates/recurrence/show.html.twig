@@ -43,6 +43,9 @@
                         {% else %}
                             date + montant
                         {% endif %}
+                        {% if recurrence.fingerprints is not empty %}
+                            <span class="badge text-bg-light border" title="{{ recurrence.fingerprints|join('&#10;') }}">{{ recurrence.fingerprints|length }} libellé(s) appris</span>
+                        {% endif %}
                     </div>
                 </div>
                 <div class="col-md-3">
