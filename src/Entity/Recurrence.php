@@ -35,6 +35,16 @@ class Recurrence
     #[ORM\JoinColumn(onDelete: 'SET NULL')]
     private ?CategorizationRule $rule = null;
 
+    /**
+     * Tokens discriminants du libellé, matchés sur mot entier : permettent
+     * de reconnaître les occurrences sans règle apprise (promotion d'un
+     * prélèvement jamais catégorisé, création manuelle).
+     *
+     * @var list<string>
+     */
+    #[ORM\Column(type: 'json')]
+    private array $tokens = [];
+
     #[ORM\Column(enumType: Direction::class)]
     private Direction $direction;
 
@@ -120,6 +130,24 @@ class Recurrence
     public function setRule(?CategorizationRule $rule): static
     {
         $this->rule = $rule;
+
+        return $this;
+    }
+
+    /**
+     * @return list<string>
+     */
+    public function getTokens(): array
+    {
+        return $this->tokens;
+    }
+
+    /**
+     * @param list<string> $tokens
+     */
+    public function setTokens(array $tokens): static
+    {
+        $this->tokens = $tokens;
 
         return $this;
     }
@@ -231,8 +259,17 @@ class Recurrence
 
     public function isAmountWithinTolerance(int $amountCents): bool
     {
-        $tolerance = (int) round(abs($this->expectedAmountCents) * $this->tolerancePct / 100);
+        return $this->isAmountCloseTo($amountCents, $this->expectedAmountCents);
+    }
 
-        return abs(abs($amountCents) - abs($this->expectedAmountCents)) <= $tolerance;
+    /**
+     * Même tolérance, mais face à un montant de référence arbitraire (celui
+     * de l'occurrence la plus proche dans le temps, en recherche rétroactive).
+     */
+    public function isAmountCloseTo(int $amountCents, int $referenceCents): bool
+    {
+        $tolerance = (int) round(abs($referenceCents) * $this->tolerancePct / 100);
+
+        return abs(abs($amountCents) - abs($referenceCents)) <= $tolerance;
     }
 }

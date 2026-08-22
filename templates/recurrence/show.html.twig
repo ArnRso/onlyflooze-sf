@@ -34,12 +34,14 @@
                     <div>{{ recurrence.category ? recurrence.category.fullName : '—' }}</div>
                 </div>
                 <div class="col-md-3">
-                    <div class="text-muted small">Règle liée</div>
+                    <div class="text-muted small">Reconnue par</div>
                     <div>
                         {% if recurrence.rule %}
-                            <a href="{{ path('app_rule_edit', {id: recurrence.rule.id}) }}">{{ recurrence.rule.name }}</a>
+                            règle <a href="{{ path('app_rule_edit', {id: recurrence.rule.id}) }}">{{ recurrence.rule.name }}</a>
+                        {% elseif recurrence.tokens is not empty %}
+                            {% for token in recurrence.tokens %}<span class="badge text-bg-light border">{{ token }}</span> {% endfor %}
                         {% else %}
-                            — (rattachement par date + montant)
+                            date + montant
                         {% endif %}
                     </div>
                 </div>

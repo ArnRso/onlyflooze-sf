@@ -106,18 +106,54 @@ class RuleConsolidatorTest extends KernelTestCase
         self::assertSame(1, $report->count(RuleChangeKind::Rebuilt));
     }
 
-    public function testRuleWhoseFingerprintsShareNothingIsDemotedToExactOnly(): void
+    public function testRuleWhoseFingerprintsShareNothingIsSplitIntoOneRulePerFingerprint(): void
     {
+        // Cas réel : [BEGLES] né de DECATHLON BEGLES + CELIO BEGLES. Les deux
+        // empreintes n'ont rien en commun : chacune devient sa propre règle,
+        // la règle-ville disparaît.
         $this->seedBeglesCorpus();
         $shopping = new Category('Shopping');
         $this->entityManager->persist($shopping);
         $rule = $this->makeRule($shopping, ['BEGLES'], ['CARTE 01/07 MOSTO BEGLES', 'CARTE 02/07 MGP*JESTOCKE Begles']);
+        $ruleId = $rule->getId();
 
         $report = $this->consolidator->consolidate();
 
-        self::assertSame([], $rule->getTokens(), 'Plus de token : ne matche qu\'à l\'empreinte exacte');
-        self::assertCount(2, $rule->getFingerprints(), 'Les empreintes validées sont conservées');
-        self::assertSame(1, $report->count(RuleChangeKind::Demoted));
+        self::assertSame(2, $report->count(RuleChangeKind::Split));
+        self::assertSame(1, $report->count(RuleChangeKind::Dropped));
+        self::assertNull($this->ruleRepository->find($ruleId));
+
+        $tokens = array_map(static fn (CategorizationRule $r): string => implode(' ', $r->getTokens()), $this->ruleRepository->findAll());
+        sort($tokens);
+        self::assertSame(['MGP JESTOCKE', 'MOSTO'], $tokens);
+        foreach ($this->ruleRepository->findAll() as $split) {
+            self::assertSame($shopping, $split->getCategory());
+            self::assertCount(1, $split->getFingerprints());
+        }
+    }
+
+    public function testForeignFingerprintIsSplitIntoItsOwnRule(): void
+    {
+        // Cas réel : « AL FATH CENON » validé sous la suggestion de la règle
+        // LIDL (seul CENON en commun, à l'époque). Nettoyée en [LIDL], la
+        // règle n'a plus rien à voir avec AL FATH : empreinte séparée.
+        foreach (['LIDL CENON', 'TABAC CENON', 'PHARMACIE CENON', 'BOUL CENON', 'AL FATH CENON'] as $merchant) {
+            $this->makeTransaction('CARTE 01/07 '.$merchant);
+        }
+        $this->entityManager->flush();
+        $courses = new Category('Courses');
+        $this->entityManager->persist($courses);
+        $rule = $this->makeRule($courses, ['LIDL', 'CENON'], ['CARTE 01/07 LIDL CENON', 'CARTE 02/07 AL FATH CENON']);
+
+        $report = $this->consolidator->consolidate();
+
+        self::assertSame(['LIDL'], $rule->getTokens());
+        self::assertSame(['carte|LIDL CENON'], $rule->getFingerprints());
+        self::assertSame(1, $report->count(RuleChangeKind::Split));
+        $split = array_values(array_filter($this->ruleRepository->findAll(), static fn (CategorizationRule $r): bool => $r !== $rule))[0];
+        self::assertSame(['AL', 'FATH'], $split->getTokens());
+        self::assertSame($courses, $split->getCategory());
+        self::assertSame(['carte|AL FATH CENON'], $split->getFingerprints());
     }
 
     public function testRuleMoreCorrectedThanConfirmedIsDemoted(): void
@@ -146,17 +182,21 @@ class RuleConsolidatorTest extends KernelTestCase
         self::assertNull($this->ruleRepository->find($orphanId));
     }
 
-    public function testExactOnlyRuleNotCoveredIsKept(): void
+    public function testExactOnlyRuleIsEmptiedIntoCoveringAndSplitRules(): void
     {
         $restos = new Category('Restos');
         $this->entityManager->persist($restos);
-        $this->makeRule($restos, ['MOSTO'], ['CARTE 01/07 MOSTO BEGLES']);
+        $mosto = $this->makeRule($restos, ['MOSTO'], ['CARTE 01/07 MOSTO BEGLES']);
         $orphan = $this->makeRule($restos, [], ['CARTE 01/07 MOSTO BEGLES', 'CARTE 02/07 MGP*JESTOCKE Begles']);
+        $orphanId = $orphan->getId();
 
         $report = $this->consolidator->consolidate();
 
-        self::assertSame(0, $report->count(RuleChangeKind::Dropped));
-        self::assertNotNull($this->ruleRepository->find($orphan->getId()));
+        self::assertSame(1, $report->count(RuleChangeKind::Trimmed), 'MOSTO BEGLES est déjà couverte par [MOSTO]');
+        self::assertSame(1, $report->count(RuleChangeKind::Split), 'JESTOCKE devient sa propre règle');
+        self::assertSame(1, $report->count(RuleChangeKind::Dropped));
+        self::assertNull($this->ruleRepository->find($orphanId));
+        self::assertCount(1, $mosto->getFingerprints(), 'La règle couvrante n\'est pas touchée');
     }
 
     public function testHandEditedSpecificTokensAreNeverWidened(): void

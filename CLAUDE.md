@@ -74,13 +74,20 @@ par comptage, récurrences par promotion, etc.).
   fréquence, dispersion en catégories, position en queue de libellé = ville/suffixe). Une règle ne repose
   JAMAIS sur un token générique ; sans token discriminant, elle ne matche qu'à l'empreinte exacte.
 - `Matching/RuleConsolidator` : auto-amélioration périodique (après import, bouton, commande) — nettoie /
-  reconstruit / rétrograde / supprime les règles à la lumière du corpus courant, puis rejoue les suggestions
-  (`RuleReapplier` retire celles devenues orphelines). Ne touche jamais à un token posé à la main.
+  reconstruit / rétrograde / supprime les règles à la lumière du corpus courant, sépare en règle propre toute
+  empreinte étrangère à sa règle (aucun token discriminant commun), retire celles couvertes ailleurs, puis
+  rejoue les suggestions (`RuleReapplier` retire celles devenues orphelines). Ne touche jamais à un token
+  posé à la main.
 - La transaction garde la trace de la suggestion au moment du tri (`suggestionAtReview`, `suggestionOutcome`,
   `reviewedAt`) : `Review/SuggestionPrecisionProvider` en tire couverture et justesse par mois (écran Règles).
-- `Recurrence/RecurrenceDetector` (suggestions de promotion, jamais de création auto),
-  `RecurrenceMatcher` (rattachement à l'import, écart de montant signalé), `RecurrenceStatusProvider`
-  (états passée/à venir/en retard, reste-à-passer).
+- `Recurrence/RecurrenceDetector` (suggestions de promotion, jamais de création auto) : observe PRLV/ECH PRET/F
+  et crédits VIR **triés ou non**, groupés par tête de libellé (premier token discriminant) puis par montants
+  voisins (agrégateur PayPal = une proposition par abonnement) ; la promotion rattache tout l'historique observé
+  et dote la récurrence de `tokens` (reconnaissance sans règle). Refus mémorisés dans `RecurrenceDismissal`
+  (sens + type + tête + montant). `RecurrenceMatcher` (règle → tokens → date+montant ; écart de montant
+  signalé), `RecurrenceBackfill` (recherche rétroactive, tolérance glissante = occurrence rattachée la plus
+  proche dans le temps ; compteur « N à rattacher » sur la liste), `RecurrenceStatusProvider` (états
+  passée/à venir/en retard, reste-à-passer).
 - `Review/TransactionCategorizer`, `Dashboard/DashboardService`, managers CRUD dans `Catalog/`.
 
 ### Frontend

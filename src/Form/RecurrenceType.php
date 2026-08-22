@@ -8,6 +8,7 @@ use App\Enum\Direction;
 use App\Repository\CategoryRepository;
 use Symfony\Bridge\Doctrine\Form\Type\EntityType;
 use Symfony\Component\Form\AbstractType;
+use Symfony\Component\Form\CallbackTransformer;
 use Symfony\Component\Form\Extension\Core\Type\CheckboxType;
 use Symfony\Component\Form\Extension\Core\Type\EnumType;
 use Symfony\Component\Form\Extension\Core\Type\IntegerType;
@@ -63,10 +64,20 @@ class RecurrenceType extends AbstractType
                 'placeholder' => '—',
                 'label' => 'Catégorie',
             ])
+            ->add('tokens', TextType::class, [
+                'label' => 'Tokens du libellé',
+                'required' => false,
+                'help' => 'Séparés par des espaces, matchés sur mot entier : reconnaît les occurrences sans règle apprise (vide = fenêtre de date + montant)',
+            ])
             ->add('active', CheckboxType::class, [
                 'label' => 'Active',
                 'required' => false,
             ]);
+
+        $builder->get('tokens')->addModelTransformer(new CallbackTransformer(
+            static fn (?array $tokens): string => implode(' ', $tokens ?? []),
+            static fn (?string $value): array => array_values(array_filter(explode(' ', mb_strtoupper(trim((string) $value))))),
+        ));
     }
 
     public function configureOptions(OptionsResolver $resolver): void

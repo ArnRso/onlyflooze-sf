@@ -9,6 +9,8 @@ enum RuleChangeKind: string
 {
     case Cleaned = 'cleaned';
     case Rebuilt = 'rebuilt';
+    case Split = 'split';
+    case Trimmed = 'trimmed';
     case Demoted = 'demoted';
     case Dropped = 'dropped';
 
@@ -17,8 +19,10 @@ enum RuleChangeKind: string
         return match ($this) {
             self::Cleaned => 'tokens génériques retirés',
             self::Rebuilt => 'reconstruite depuis ses empreintes',
+            self::Split => 'empreinte étrangère séparée en règle propre',
+            self::Trimmed => 'empreintes retirées (couvertes par une autre règle)',
             self::Demoted => 'rétrogradée en empreintes seules',
-            self::Dropped => 'supprimée (empreintes couvertes par une autre règle)',
+            self::Dropped => 'supprimée (plus rien à couvrir)',
         };
     }
 }
