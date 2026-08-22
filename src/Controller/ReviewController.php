@@ -57,15 +57,16 @@ class ReviewController extends AbstractController
 
         $nature = TransactionNature::tryFrom((string) $request->getPayload()->get('nature'));
 
-        $categorizer->categorize($transaction, $category, $nature);
+        $resuggested = $categorizer->categorize($transaction, $category, $nature);
 
         if ($request->getPreferredFormat() === TurboBundle::STREAM_FORMAT) {
             $request->setRequestFormat(TurboBundle::STREAM_FORMAT);
 
-            // La liste entière est re-rendue : les suggestions nées de la
-            // réapplication des règles apparaissent immédiatement.
+            // Seules la ligne validée et celles dont la suggestion vient de
+            // changer sont touchées : le reste de la page ne bouge pas.
             return $this->render('review/categorize.stream.html.twig', [
-                'transactions' => $transactionRepository->findToReview(100),
+                'transaction' => $transaction,
+                'resuggested' => $resuggested,
                 'toReviewCount' => $transactionRepository->countToReview(),
                 'categories' => $categoryRepository->findAllOrdered(),
             ]);
@@ -81,7 +82,7 @@ class ReviewController extends AbstractController
             throw $this->createAccessDeniedException('Jeton CSRF invalide.');
         }
 
-        $updated = $ruleReapplier->reapply();
+        $updated = \count($ruleReapplier->reapply());
         $this->addFlash('success', sprintf('%d suggestion(s) posée(s) ou mise(s) à jour.', $updated));
 
         return $this->redirectToRoute('app_review');

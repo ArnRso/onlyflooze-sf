@@ -66,6 +66,40 @@ class ReviewFlowTest extends WebTestCase
         self::assertContains('CARREFOUR', $rules[0]->getTokens());
     }
 
+    public function testCategorizeStreamOnlyTouchesTheRowsThatChanged(): void
+    {
+        $courses = new Category('Courses');
+        $this->entityManager->persist($courses);
+        $this->entityManager->flush();
+
+        static::getContainer()->get(TransactionImporter::class)->import(implode("\n", [
+            '"Date operation";"Date valeur";"Libelle";"Debit";"Credit"',
+            '"21/04/2026";"21/04/2026";"CARTE 19/04 CHRONO 1010 BOULIAC";"74,02";""',
+            '"18/04/2026";"18/04/2026";"CARTE 17/04 CHRONO 1010 BOULIAC";"49,66";""',
+            '"19/04/2026";"19/04/2026";"CARTE 19/04 TBM-VENTE LIGNE BORDEAUX";"1,90";""',
+        ]), 'export.csv');
+
+        $byLabel = [];
+        foreach ($this->transactionRepository->findAllToReview() as $transaction) {
+            $byLabel[$transaction->getAmountCents()] = $transaction;
+        }
+
+        $crawler = $this->client->request('GET', '/review');
+        $form = $crawler->filter('tr#review-row-'.$byLabel[-7402]->getId().' form')->form([
+            'category' => (string) $courses->getId(),
+            'nature' => 'expense',
+        ]);
+        $this->client->request($form->getMethod(), $form->getUri(), $form->getPhpValues(), [], ['HTTP_ACCEPT' => 'text/vnd.turbo-stream.html']);
+
+        self::assertResponseIsSuccessful();
+        $content = (string) $this->client->getResponse()->getContent();
+        self::assertStringContainsString('action="remove" target="review-row-'.$byLabel[-7402]->getId().'"', $content);
+        self::assertStringContainsString('action="replace" target="review-row-'.$byLabel[-4966]->getId().'"', $content, 'Le jumeau reçoit sa suggestion');
+        self::assertStringContainsString('Suggestion : Courses', $content);
+        self::assertStringNotContainsString('review-row-'.$byLabel[-190]->getId(), $content, 'TBM n\'a pas bougé : pas re-rendu');
+        self::assertStringNotContainsString('target="review-list"', $content, 'La liste entière n\'est pas re-rendue');
+    }
+
     public function testLookupShowsWhatWasAlreadyDecidedForALabel(): void
     {
         $courses = new Category('Courses');

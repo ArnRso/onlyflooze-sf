@@ -3,6 +3,7 @@
 namespace App\Service\Review;
 
 use App\Dto\NormalizedLabel;
+use App\Entity\Transaction;
 use App\Enum\Direction;
 use App\Enum\TransactionType;
 use App\Repository\CategorizationRuleRepository;
@@ -30,17 +31,19 @@ class RuleReapplier
     }
 
     /**
-     * Retourne le nombre de transactions dont la suggestion a été posée,
-     * mise à jour ou retirée.
+     * Retourne les transactions dont la suggestion a été posée, mise à jour
+     * ou retirée (la file de révision ne re-rend que ces lignes-là).
+     *
+     * @return list<Transaction>
      */
-    public function reapply(): int
+    public function reapply(): array
     {
         $rulesByDirection = [
             Direction::Debit->value => $this->ruleRepository->findByDirection(Direction::Debit),
             Direction::Credit->value => $this->ruleRepository->findByDirection(Direction::Credit),
         ];
 
-        $updated = 0;
+        $updated = [];
         foreach ($this->transactionRepository->findAllToReview() as $transaction) {
             $label = new NormalizedLabel($transaction->getType(), $transaction->getTokens());
 
@@ -60,7 +63,7 @@ class RuleReapplier
                 if ($transaction->getMatchedRule() !== null) {
                     $transaction->setSuggestedCategory(null);
                     $transaction->setMatchedRule(null);
-                    ++$updated;
+                    $updated[] = $transaction;
                 }
                 continue;
             }
@@ -72,7 +75,7 @@ class RuleReapplier
 
             $transaction->setSuggestedCategory($match->category);
             $transaction->setMatchedRule($match->rule);
-            ++$updated;
+            $updated[] = $transaction;
         }
 
         $this->entityManager->flush();
