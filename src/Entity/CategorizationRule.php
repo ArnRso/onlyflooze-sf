@@ -147,6 +147,14 @@ class CategorizationRule
         return $this;
     }
 
+    public function removeFingerprint(string $fingerprint): static
+    {
+        $this->fingerprints = array_values(array_diff($this->fingerprints, [$fingerprint]));
+        $this->updatedAt = new \DateTimeImmutable();
+
+        return $this;
+    }
+
     public function getAmountCents(): ?int
     {
         return $this->amountCents;

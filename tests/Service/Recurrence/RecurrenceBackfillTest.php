@@ -123,6 +123,64 @@ class RecurrenceBackfillTest extends KernelTestCase
         self::assertSame([], $this->backfill->findCandidates($recurrence), 'Une transaction détachée n\'est jamais reproposée');
     }
 
+    public function testToleranceFollowsTheNearestAttachedOccurrence(): void
+    {
+        // Cas réel : Bouygues à 39,99 € pendant deux ans, puis 24,99 €.
+        // L'attendu courant (24,99) refuserait tout l'historique ; comparé à
+        // l'occurrence rattachée la plus proche dans le temps, il passe.
+        $recurrence = new Recurrence('Loyer', Direction::Debit, 5, -2499);
+        $this->entityManager->persist($recurrence);
+
+        $oldAttached = $this->makeTransaction('VIR vers BAILLEUR', -3999, '2024-06-05');
+        $oldAttached->setRecurrence($recurrence);
+        $recentAttached = $this->makeTransaction('VIR vers BAILLEUR', -2499, '2026-06-05');
+        $recentAttached->setRecurrence($recurrence);
+
+        $oldCandidate = $this->makeTransaction('VIR vers BAILLEUR', -3999, '2024-07-05');
+        $this->makeTransaction('VIR vers BAILLEUR', -3999, '2026-07-05');
+        $this->entityManager->flush();
+
+        $candidates = $this->backfill->findCandidates($recurrence);
+
+        self::assertCount(1, $candidates);
+        self::assertSame($oldCandidate->getId(), $candidates[0]->getId(), 'Le montant de 2024 est jugé face à l\'occurrence de 2024, pas face à l\'attendu de 2026');
+    }
+
+    public function testRecurrenceTokensMatchWholeHistoryRegardlessOfAmount(): void
+    {
+        $recurrence = new Recurrence('REGIE EAU', Direction::Debit, 10, -3400);
+        $recurrence->setTokens(['REGIE', 'EAU']);
+        $this->entityManager->persist($recurrence);
+
+        $this->makeTransaction('PRLV REGIE DE L EAU DE BORDEAUX', -12637, '2023-09-10');
+        $this->makeTransaction('PRLV REGIE EAU BORDEAUX METROPOLE', -3100, '2025-03-10');
+        $this->makeTransaction('PRLV EDF clients particuliers', -8400, '2025-03-10');
+        $this->entityManager->flush();
+
+        $dates = array_map(static fn (Transaction $t): string => $t->getOperationDate()->format('Y-m-d'), $this->backfill->findCandidates($recurrence));
+        sort($dates);
+        self::assertSame(['2023-09-10', '2025-03-10'], $dates, 'Les deux graphies, même la facture annuelle hors tolérance ; pas EDF');
+    }
+
+    public function testDateAndAmountFallbackNeverCrossesTransactionTypes(): void
+    {
+        // Cotisation bancaire (F) à ~10 € le 8 : les achats carte à 10 € le
+        // 8 ne sont pas des occurrences, quel que soit le montant.
+        $recurrence = new Recurrence('Cotisation', Direction::Debit, 8, -1000);
+        $this->entityManager->persist($recurrence);
+        $attached = $this->makeTransaction('F COTISATION EUROCOMPTE 06/26', -1000, '2026-06-08');
+        $attached->setRecurrence($recurrence);
+
+        $fee = $this->makeTransaction('F COTISATION EUROCOMPTE 05/26', -1000, '2026-05-08');
+        $this->makeTransaction('CARTE 07/05 BOUL LA CASSAGNE CENON', -1000, '2026-05-08');
+        $this->entityManager->flush();
+
+        $candidates = $this->backfill->findCandidates($recurrence);
+
+        self::assertCount(1, $candidates);
+        self::assertSame($fee->getId(), $candidates[0]->getId());
+    }
+
     public function testDateWindowFallbackWithoutRule(): void
     {
         // Récurrence créée à la main, sans règle : fenêtre de date + tolérance.

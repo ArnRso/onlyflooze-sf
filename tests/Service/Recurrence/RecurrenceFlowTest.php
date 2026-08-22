@@ -128,7 +128,7 @@ class RecurrenceFlowTest extends KernelTestCase
 
         $byName = [];
         foreach ($suggestions as $suggestion) {
-            $byName[$suggestion->rule->getName()] = $suggestion;
+            $byName[$suggestion->name] = $suggestion;
         }
         ksort($byName);
 
@@ -186,6 +186,82 @@ class RecurrenceFlowTest extends KernelTestCase
         self::assertSame($recurrence->getId(), $second->getRecurrence()?->getId());
 
         self::assertSame([], $this->detector->suggest(), 'Une règle promue n\'est plus proposée');
+    }
+
+    public function testUncategorizedMonthlyDebitsAreSuggestedAndGraphiesMerge(): void
+    {
+        // Cas réel : 33 prélèvements de la Régie de l'eau, jamais triés, sous
+        // deux graphies. Ils doivent être proposés (sans attendre un tri) et
+        // ne faire qu'UNE proposition : même tête de libellé.
+        $this->importer->import(implode("\n", [
+            '"Date operation";"Date valeur";"Libelle";"Debit";"Credit"',
+            '"10/03/2026";"10/03/2026";"PRLV REGIE DE L EAU DE BORDEAUX";"31,00";""',
+            '"10/04/2026";"10/04/2026";"PRLV REGIE DE L EAU DE BORDEAUX";"31,00";""',
+            '"10/05/2026";"10/05/2026";"PRLV REGIE EAU BORDEAUX METROPOLE";"34,00";""',
+            '"10/06/2026";"10/06/2026";"PRLV REGIE EAU BORDEAUX METROPOLE";"34,00";""',
+        ]), 'export.csv');
+
+        $suggestions = $this->detector->suggest();
+
+        self::assertCount(1, $suggestions);
+        $suggestion = $suggestions[0];
+        self::assertNull($suggestion->rule, 'Aucune règle : rien n\'a été trié');
+        self::assertNull($suggestion->category);
+        self::assertSame(4, $suggestion->getOccurrenceCount());
+        self::assertSame('REGIE', $suggestion->headToken);
+        self::assertSame(['REGIE', 'EAU', 'BORDEAUX'], $suggestion->tokens, 'Tokens communs aux deux graphies');
+
+        $recurrence = $this->detector->promote($suggestion);
+
+        self::assertSame(['REGIE', 'EAU', 'BORDEAUX'], $recurrence->getTokens());
+        self::assertCount(4, $this->transactionRepository->findBy(['recurrence' => $recurrence]), 'Tout l\'historique est rattaché');
+
+        // Le mois suivant, le libellé est reconnu par les tokens de la
+        // récurrence, sans règle.
+        $this->importer->import(implode("\n", [
+            '"Date operation";"Date valeur";"Libelle";"Debit";"Credit"',
+            '"10/07/2026";"10/07/2026";"PRLV REGIE EAU BORDEAUX METROPOLE";"37,00";""',
+        ]), 'export2.csv');
+        self::assertCount(5, $this->transactionRepository->findBy(['recurrence' => $recurrence]));
+    }
+
+    public function testAggregatorAmountsProduceSeparateSuggestionsAndDismissIsPerAmount(): void
+    {
+        // PayPal : un seul libellé, deux abonnements (9,99 et 21,24). Deux
+        // propositions ; en écarter une ne fait pas taire l'autre.
+        $this->importer->import(implode("\n", [
+            '"Date operation";"Date valeur";"Libelle";"Debit";"Credit"',
+            '"02/05/2026";"02/05/2026";"PRLV PayPal Europe S.a.r.l. et C";"9,99";""',
+            '"17/05/2026";"17/05/2026";"PRLV PayPal Europe S.a.r.l. et C";"21,24";""',
+            '"02/06/2026";"02/06/2026";"PRLV PayPal Europe S.a.r.l. et C";"9,99";""',
+            '"17/06/2026";"17/06/2026";"PRLV PayPal Europe S.a.r.l. et C";"21,24";""',
+        ]), 'export.csv');
+
+        $suggestions = $this->detector->suggest();
+        $amounts = array_map(static fn ($s) => $s->expectedAmountCents, $suggestions);
+        sort($amounts);
+        self::assertSame([-2124, -999], $amounts, 'Une proposition par montant, jamais une moyenne fourre-tout');
+
+        $this->detector->dismiss($suggestions[0]);
+
+        $remaining = $this->detector->suggest();
+        self::assertCount(1, $remaining);
+        self::assertNotSame($suggestions[0]->expectedAmountCents, $remaining[0]->expectedAmountCents);
+    }
+
+    public function testHistoryOfATrackedRecurrenceIsNotProposedAgain(): void
+    {
+        // Des occurrences non rattachées d'une récurrence déjà suivie
+        // relèvent de la recherche rétroactive, pas d'une nouvelle proposition.
+        [$logement, $rule] = $this->makeEdfRule();
+        $recurrence = new Recurrence('EDF', Direction::Debit, 21, -8600);
+        $recurrence->setRule($rule);
+        $this->entityManager->persist($recurrence);
+        $this->makeCategorizedTransaction('PRLV EDF clients particuliers', -8400, '2025-05-21', $logement, $rule);
+        $this->makeCategorizedTransaction('PRLV EDF clients particuliers', -8800, '2025-06-21', $logement, $rule);
+        $this->entityManager->flush();
+
+        self::assertSame([], $this->detector->suggest());
     }
 
     public function testDismissedSuggestionIsNotRepeated(): void

@@ -197,19 +197,18 @@ class TransactionRepository extends ServiceEntityRepository
     }
 
     /**
-     * Transactions catégorisées candidates à une promotion en récurrence :
-     * préfixes PRLV/ECH PRET/F et crédits VIR réguliers, non encore
-     * rattachées, dont la règle n'a pas été écartée par l'utilisateur.
+     * Transactions observées pour la détection de récurrences : préfixes
+     * PRLV/ECH PRET/F et crédits VIR, non encore rattachées, triées ou non —
+     * sauf celles dont la règle a été écartée par l'utilisateur.
      *
      * @return list<Transaction>
      */
-    public function findRecurrenceCandidates(): array
+    public function findRecurrenceObservations(): array
     {
         return $this->createQueryBuilder('t')
-            ->join('t.matchedRule', 'r')
-            ->where('t.category IS NOT NULL')
-            ->andWhere('t.recurrence IS NULL')
-            ->andWhere('r.recurrenceOptOut = false')
+            ->leftJoin('t.matchedRule', 'r')
+            ->where('t.recurrence IS NULL')
+            ->andWhere('r.id IS NULL OR r.recurrenceOptOut = false')
             ->andWhere('t.type IN (:candidateTypes) OR (t.type = :virement AND t.amountCents > 0)')
             ->setParameter('candidateTypes', [TransactionType::Prelevement, TransactionType::EcheancePret, TransactionType::Frais])
             ->setParameter('virement', TransactionType::Virement)

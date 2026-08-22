@@ -25,16 +25,19 @@ class RecurrenceController extends AbstractController
         RecurrenceRepository $recurrenceRepository,
         RecurrenceDetector $detector,
         RecurrenceStatusProvider $statusProvider,
+        RecurrenceBackfill $backfill,
     ): Response {
         $month = new \DateTimeImmutable('first day of this month');
 
+        $recurrences = $recurrenceRepository->findAllOrdered();
         $statuses = [];
-        foreach ($recurrenceRepository->findAllOrdered() as $recurrence) {
+        foreach ($recurrences as $recurrence) {
             $statuses[] = $statusProvider->statusFor($recurrence, $month);
         }
 
         return $this->render('recurrence/index.html.twig', [
             'statuses' => $statuses,
+            'backfillCounts' => $backfill->countCandidates($recurrences),
             'suggestions' => $detector->suggest(),
             'month' => $month,
         ]);
@@ -191,14 +194,14 @@ class RecurrenceController extends AbstractController
         return $this->redirectToRoute('app_recurrences');
     }
 
-    #[Route('/recurrences/promote/{ruleId}', name: 'app_recurrence_promote', methods: ['POST'])]
-    public function promote(string $ruleId, Request $request, RecurrenceDetector $detector): Response
+    #[Route('/recurrences/promote/{key}', name: 'app_recurrence_promote', methods: ['POST'])]
+    public function promote(string $key, Request $request, RecurrenceDetector $detector): Response
     {
-        if (!$this->isCsrfTokenValid('promote'.$ruleId, (string) $request->getPayload()->get('_token'))) {
+        if (!$this->isCsrfTokenValid('promote'.$key, (string) $request->getPayload()->get('_token'))) {
             throw $this->createAccessDeniedException('Jeton CSRF invalide.');
         }
 
-        $suggestion = $detector->findSuggestionForRule($ruleId);
+        $suggestion = $detector->findSuggestionByKey($key);
         if ($suggestion === null) {
             $this->addFlash('warning', 'Cette proposition n\'est plus valable.');
 
@@ -206,19 +209,19 @@ class RecurrenceController extends AbstractController
         }
 
         $recurrence = $detector->promote($suggestion);
-        $this->addFlash('success', sprintf('« %s » est maintenant suivie. Vérifie ci-dessous ce que le système propose de rattacher dans l\'historique.', $recurrence->getName()));
+        $this->addFlash('success', sprintf('« %s » est maintenant suivie : %d occurrence(s) de l\'historique rattachée(s).', $recurrence->getName(), $suggestion->getOccurrenceCount()));
 
         return $this->redirectToRoute('app_recurrence_show', ['id' => $recurrence->getId()]);
     }
 
-    #[Route('/recurrences/dismiss/{ruleId}', name: 'app_recurrence_dismiss', methods: ['POST'])]
-    public function dismiss(string $ruleId, Request $request, RecurrenceDetector $detector): Response
+    #[Route('/recurrences/dismiss/{key}', name: 'app_recurrence_dismiss', methods: ['POST'])]
+    public function dismiss(string $key, Request $request, RecurrenceDetector $detector): Response
     {
-        if (!$this->isCsrfTokenValid('dismiss'.$ruleId, (string) $request->getPayload()->get('_token'))) {
+        if (!$this->isCsrfTokenValid('dismiss'.$key, (string) $request->getPayload()->get('_token'))) {
             throw $this->createAccessDeniedException('Jeton CSRF invalide.');
         }
 
-        $suggestion = $detector->findSuggestionForRule($ruleId);
+        $suggestion = $detector->findSuggestionByKey($key);
         if ($suggestion !== null) {
             $detector->dismiss($suggestion);
             $this->addFlash('success', 'Proposition écartée, elle ne sera plus refaite.');
