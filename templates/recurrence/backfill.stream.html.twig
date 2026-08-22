@@ -1,0 +1,20 @@
+{# La page n'est pas rechargée : la ligne change de tableau, les compteurs suivent.
+   Le Cmd+F de l'utilisateur (pour repérer les bonnes lignes) reste en place. #}
+{% if action == 'attach' %}
+    <turbo-stream action="remove" target="backfill-row-{{ transaction.id }}"></turbo-stream>
+    <turbo-stream action="prepend" target="attached-list">
+        <template>{{ include('recurrence/_attached_row.html.twig') }}</template>
+    </turbo-stream>
+{% elseif action == 'exclude' %}
+    <turbo-stream action="remove" target="backfill-row-{{ transaction.id }}"></turbo-stream>
+{% else %}
+    <turbo-stream action="remove" target="attached-row-{{ transaction.id }}"></turbo-stream>
+{% endif %}
+
+<turbo-stream action="update" target="backfill-count">
+    <template>{{ candidateCount }}</template>
+</turbo-stream>
+
+<turbo-stream action="update" target="attached-count">
+    <template>{{ attachedCount }}</template>
+</turbo-stream>

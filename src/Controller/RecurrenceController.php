@@ -17,6 +17,7 @@ use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
+use Symfony\UX\Turbo\TurboBundle;
 
 class RecurrenceController extends AbstractController
 {
@@ -67,12 +68,17 @@ class RecurrenceController extends AbstractController
         #[MapEntity(id: 'transactionId')] Transaction $transaction,
         Request $request,
         RecurrenceBackfill $backfill,
+        TransactionRepository $transactionRepository,
     ): Response {
         if (!$this->isCsrfTokenValid('attach'.$transaction->getId(), (string) $request->getPayload()->get('_token'))) {
             throw $this->createAccessDeniedException('Jeton CSRF invalide.');
         }
 
         $backfill->attach($recurrence, $transaction);
+
+        if ($request->getPreferredFormat() === TurboBundle::STREAM_FORMAT) {
+            return $this->renderBackfillStream($request, 'attach', $recurrence, $transaction, $backfill, $transactionRepository);
+        }
 
         return $this->redirectToRoute('app_recurrence_show', ['id' => $recurrence->getId()]);
     }
@@ -83,12 +89,17 @@ class RecurrenceController extends AbstractController
         #[MapEntity(id: 'transactionId')] Transaction $transaction,
         Request $request,
         RecurrenceBackfill $backfill,
+        TransactionRepository $transactionRepository,
     ): Response {
         if (!$this->isCsrfTokenValid('exclude'.$transaction->getId(), (string) $request->getPayload()->get('_token'))) {
             throw $this->createAccessDeniedException('Jeton CSRF invalide.');
         }
 
         $backfill->exclude($recurrence, $transaction);
+
+        if ($request->getPreferredFormat() === TurboBundle::STREAM_FORMAT) {
+            return $this->renderBackfillStream($request, 'exclude', $recurrence, $transaction, $backfill, $transactionRepository);
+        }
 
         return $this->redirectToRoute('app_recurrence_show', ['id' => $recurrence->getId()]);
     }
@@ -134,12 +145,18 @@ class RecurrenceController extends AbstractController
         #[MapEntity(id: 'transactionId')] Transaction $transaction,
         Request $request,
         RecurrenceBackfill $backfill,
+        TransactionRepository $transactionRepository,
     ): Response {
         if (!$this->isCsrfTokenValid('detach'.$transaction->getId(), (string) $request->getPayload()->get('_token'))) {
             throw $this->createAccessDeniedException('Jeton CSRF invalide.');
         }
 
         $backfill->detach($recurrence, $transaction);
+
+        if ($request->getPreferredFormat() === TurboBundle::STREAM_FORMAT) {
+            return $this->renderBackfillStream($request, 'detach', $recurrence, $transaction, $backfill, $transactionRepository);
+        }
+
         $this->addFlash('success', 'Transaction détachée : elle ne sera plus proposée pour cette récurrence.');
 
         return $this->redirectToRoute('app_recurrence_show', ['id' => $recurrence->getId()]);
@@ -228,5 +245,29 @@ class RecurrenceController extends AbstractController
         }
 
         return $this->redirectToRoute('app_recurrences');
+    }
+
+    /**
+     * Réponse Turbo Stream des actions de recherche rétroactive : la ligne
+     * change de tableau sans recharger la page (l'utilisateur garde son
+     * Cmd+F pour repérer les bonnes lignes).
+     */
+    private function renderBackfillStream(
+        Request $request,
+        string $action,
+        Recurrence $recurrence,
+        Transaction $transaction,
+        RecurrenceBackfill $backfill,
+        TransactionRepository $transactionRepository,
+    ): Response {
+        $request->setRequestFormat(TurboBundle::STREAM_FORMAT);
+
+        return $this->render('recurrence/backfill.stream.html.twig', [
+            'action' => $action,
+            'recurrence' => $recurrence,
+            'transaction' => $transaction,
+            'candidateCount' => \count($backfill->findCandidates($recurrence)),
+            'attachedCount' => $transactionRepository->count(['recurrence' => $recurrence]),
+        ]);
     }
 }
