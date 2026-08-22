@@ -1,0 +1,20 @@
+<tr id="backfill-row-{{ transaction.id }}">
+    <td class="ps-3 text-nowrap">{{ transaction.operationDate|date('d/m/Y') }}</td>
+    <td>
+        {{ transaction.label }}
+        {% if not recurrence.isAmountWithinTolerance(transaction.amountCents) %}
+            <span class="badge text-bg-warning" title="Écart de montant hors tolérance">⚠ écart</span>
+        {% endif %}
+    </td>
+    <td class="text-end text-nowrap {{ transaction.amountCents < 0 ? 'text-danger' : 'text-success' }}">{{ transaction.amountCents|money(true) }}</td>
+    <td class="text-end pe-3 text-nowrap">
+        <form method="post" action="{{ path('app_recurrence_attach', {id: recurrence.id, transactionId: transaction.id}) }}" class="d-inline">
+            <input type="hidden" name="_token" value="{{ csrf_token('attach' ~ transaction.id) }}">
+            <button type="submit" class="btn btn-sm btn-success" title="Rattacher à la récurrence">✓ Rattacher</button>
+        </form>
+        <form method="post" action="{{ path('app_recurrence_exclude', {id: recurrence.id, transactionId: transaction.id}) }}" class="d-inline">
+            <input type="hidden" name="_token" value="{{ csrf_token('exclude' ~ transaction.id) }}">
+            <button type="submit" class="btn btn-sm btn-outline-secondary" title="Ne plus jamais proposer cette ligne">✗ Ignorer</button>
+        </form>
+    </td>
+</tr>

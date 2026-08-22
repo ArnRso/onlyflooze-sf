@@ -1,0 +1,17 @@
+<tr id="attached-row-{{ transaction.id }}">
+    <td class="ps-3 text-nowrap">{{ transaction.operationDate|date('d/m/Y') }}</td>
+    <td>
+        {{ transaction.label }}
+        {% if transaction.amountOutOfTolerance %}
+            <span class="badge text-bg-warning">⚠ hors tolérance</span>
+        {% endif %}
+    </td>
+    <td class="text-end text-nowrap {{ transaction.amountCents < 0 ? 'text-danger' : 'text-success' }}">{{ transaction.amountCents|money(true) }}</td>
+    <td class="text-end text-nowrap text-muted">{{ (transaction.amountCents - recurrence.expectedAmountCents)|money(true) }}</td>
+    <td class="text-end pe-3">
+        <form method="post" action="{{ path('app_recurrence_detach', {id: recurrence.id, transactionId: transaction.id}) }}" data-turbo-confirm="Détacher cette transaction ? Elle ne sera plus proposée pour cette récurrence.">
+            <input type="hidden" name="_token" value="{{ csrf_token('detach' ~ transaction.id) }}">
+            <button type="submit" class="btn btn-sm btn-outline-danger" title="Rattachée par erreur : détacher">Détacher</button>
+        </form>
+    </td>
+</tr>

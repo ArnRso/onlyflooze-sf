@@ -133,6 +133,44 @@ class RecurrenceScreensTest extends WebTestCase
         self::assertCount(0, $crawler->filter('form[action*="/attach/"]'));
     }
 
+    public function testBackfillAttachAnswersWithATurboStream(): void
+    {
+        // Depuis la page, Turbo soumet le formulaire en demandant un stream :
+        // la ligne change de tableau sans rechargement (le Cmd+F de
+        // l'utilisateur survit).
+        $logement = new Category('Logement');
+        $rule = new CategorizationRule('EDF', $logement, Direction::Debit);
+        $rule->setTokens(['EDF']);
+        $this->entityManager->persist($logement);
+        $this->entityManager->persist($rule);
+
+        $recurrence = new Recurrence('EDF', Direction::Debit, 21, -8600);
+        $recurrence->setRule($rule);
+        $this->entityManager->persist($recurrence);
+
+        $operationDate = new \DateTimeImmutable('2026-06-21');
+        $normalized = static::getContainer()->get(LabelNormalizer::class)->normalize('PRLV EDF clients particuliers', $operationDate);
+        $transaction = new Transaction($operationDate, $operationDate, 'PRLV EDF clients particuliers', -8800, $normalized->type);
+        $transaction->setTokens($normalized->tokens);
+        $this->entityManager->persist($transaction);
+        $this->entityManager->flush();
+
+        $crawler = $this->client->request('GET', '/recurrences/'.$recurrence->getId());
+        $form = $crawler->filter('form[action*="/attach/"]')->form();
+        $this->client->request($form->getMethod(), $form->getUri(), $form->getPhpValues(), [], ['HTTP_ACCEPT' => 'text/vnd.turbo-stream.html']);
+
+        self::assertResponseIsSuccessful();
+        self::assertStringStartsWith('text/vnd.turbo-stream.html', (string) $this->client->getResponse()->headers->get('Content-Type'));
+        $content = (string) $this->client->getResponse()->getContent();
+        self::assertStringContainsString('action="remove" target="backfill-row-'.$transaction->getId().'"', $content);
+        self::assertStringContainsString('action="prepend" target="attached-list"', $content);
+        self::assertStringContainsString('id="attached-row-'.$transaction->getId().'"', $content);
+
+        $entityManager = static::getContainer()->get(EntityManagerInterface::class);
+        $entityManager->clear();
+        self::assertSame((string) $recurrence->getId(), (string) $entityManager->find(Transaction::class, $transaction->getId())?->getRecurrence()?->getId());
+    }
+
     public function testShowDoesNotShadowNewRoute(): void
     {
         $this->client->request('GET', '/recurrences/new');

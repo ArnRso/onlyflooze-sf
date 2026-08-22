@@ -65,41 +65,20 @@
         </div>
     </div>
 
-    {% if candidates is not empty %}
-        <div class="card mb-4 border-primary">
-            <div class="card-header text-bg-primary">
-                Correspondances possibles dans l'historique ({{ candidates|length }}) — à valider ligne par ligne
-            </div>
-            <table class="table table-sm align-middle mb-0">
-                <tbody>
-                    {% for transaction in candidates %}
-                        <tr>
-                            <td class="ps-3 text-nowrap">{{ transaction.operationDate|date('d/m/Y') }}</td>
-                            <td>
-                                {{ transaction.label }}
-                                {% if not recurrence.isAmountWithinTolerance(transaction.amountCents) %}
-                                    <span class="badge text-bg-warning" title="Écart de montant hors tolérance">⚠ écart</span>
-                                {% endif %}
-                            </td>
-                            <td class="text-end text-nowrap {{ transaction.amountCents < 0 ? 'text-danger' : 'text-success' }}">{{ transaction.amountCents|money(true) }}</td>
-                            <td class="text-end pe-3 text-nowrap">
-                                <form method="post" action="{{ path('app_recurrence_attach', {id: recurrence.id, transactionId: transaction.id}) }}" class="d-inline">
-                                    <input type="hidden" name="_token" value="{{ csrf_token('attach' ~ transaction.id) }}">
-                                    <button type="submit" class="btn btn-sm btn-success" title="Rattacher à la récurrence">✓ Rattacher</button>
-                                </form>
-                                <form method="post" action="{{ path('app_recurrence_exclude', {id: recurrence.id, transactionId: transaction.id}) }}" class="d-inline">
-                                    <input type="hidden" name="_token" value="{{ csrf_token('exclude' ~ transaction.id) }}">
-                                    <button type="submit" class="btn btn-sm btn-outline-secondary" title="Ne plus jamais proposer cette ligne">✗ Ignorer</button>
-                                </form>
-                            </td>
-                        </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
+    <div class="card mb-4 border-primary {{ candidates is empty ? 'd-none' }}" id="backfill-card">
+        <div class="card-header text-bg-primary">
+            Correspondances possibles dans l'historique (<span id="backfill-count">{{ candidates|length }}</span>) — à valider ligne par ligne
         </div>
-    {% endif %}
+        <table class="table table-sm align-middle mb-0">
+            <tbody id="backfill-list">
+                {% for transaction in candidates %}
+                    {{ include('recurrence/_candidate_row.html.twig') }}
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
 
-    <h2 class="h5">Transactions rattachées ({{ transactions|length }})</h2>
+    <h2 class="h5">Transactions rattachées (<span id="attached-count">{{ transactions|length }}</span>)</h2>
     <div class="card">
         <table class="table table-sm table-hover align-middle mb-0">
             <thead>
@@ -111,27 +90,11 @@
                     <th class="pe-3"></th>
                 </tr>
             </thead>
-            <tbody>
+            <tbody id="attached-list">
                 {% for transaction in transactions %}
-                    <tr>
-                        <td class="ps-3 text-nowrap">{{ transaction.operationDate|date('d/m/Y') }}</td>
-                        <td>
-                            {{ transaction.label }}
-                            {% if transaction.amountOutOfTolerance %}
-                                <span class="badge text-bg-warning">⚠ hors tolérance</span>
-                            {% endif %}
-                        </td>
-                        <td class="text-end text-nowrap {{ transaction.amountCents < 0 ? 'text-danger' : 'text-success' }}">{{ transaction.amountCents|money(true) }}</td>
-                        <td class="text-end text-nowrap text-muted">{{ (transaction.amountCents - recurrence.expectedAmountCents)|money(true) }}</td>
-                        <td class="text-end pe-3">
-                            <form method="post" action="{{ path('app_recurrence_detach', {id: recurrence.id, transactionId: transaction.id}) }}" data-turbo-confirm="Détacher cette transaction ? Elle ne sera plus proposée pour cette récurrence.">
-                                <input type="hidden" name="_token" value="{{ csrf_token('detach' ~ transaction.id) }}">
-                                <button type="submit" class="btn btn-sm btn-outline-danger" title="Rattachée par erreur : détacher">Détacher</button>
-                            </form>
-                        </td>
-                    </tr>
+                    {{ include('recurrence/_attached_row.html.twig') }}
                 {% else %}
-                    <tr><td colspan="5" class="text-center text-muted py-4">Aucune transaction rattachée pour l'instant.</td></tr>
+                    <tr id="attached-empty"><td colspan="5" class="text-center text-muted py-4">Aucune transaction rattachée pour l'instant.</td></tr>
                 {% endfor %}
             </tbody>
         </table>
