@@ -2,7 +2,7 @@
 set -e  # Arrêter en cas d'erreur
 
 # Configuration
-SSH_ALIAS="home-arnrso"
+SSH_ALIAS="docker"
 REMOTE_CONTAINER="onlyflooze_db"
 LOCAL_CONTAINER="onlyflooze_db"
 DUMP_FILE="prod_dump_$(date +%Y%m%d_%H%M%S).sql"
