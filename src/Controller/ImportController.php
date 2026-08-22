@@ -7,6 +7,7 @@ use App\Exception\CsvParseException;
 use App\Form\CsvUploadType;
 use App\Repository\ImportBatchRepository;
 use App\Service\Import\TransactionImporter;
+use App\Service\Matching\RuleConsolidator;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\File\UploadedFile;
 use Symfony\Component\HttpFoundation\Request;
@@ -19,6 +20,7 @@ class ImportController extends AbstractController
     public function index(
         Request $request,
         TransactionImporter $importer,
+        RuleConsolidator $consolidator,
         ImportBatchRepository $importBatchRepository,
     ): Response {
         $form = $this->createForm(CsvUploadType::class);
@@ -33,6 +35,13 @@ class ImportController extends AbstractController
                     (string) file_get_contents($file->getPathname()),
                     $file->getClientOriginalName(),
                 );
+
+                // Le corpus vient de grandir : les règles sont relues à sa
+                // lumière et les suggestions rejouées.
+                $report = $consolidator->consolidate();
+                if (!$report->isEmpty()) {
+                    $this->addFlash('info', 'Consolidation des règles : '.$report->summary());
+                }
 
                 return $this->redirectToRoute('app_import_result', ['id' => $batch->getId()]);
             } catch (CsvParseException $exception) {

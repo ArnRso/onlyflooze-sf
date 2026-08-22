@@ -8,7 +8,6 @@ use App\Entity\Category;
 use App\Entity\Transaction;
 use App\Enum\TransactionNature;
 use App\Repository\CategorizationRuleRepository;
-use App\Repository\TransactionRepository;
 use Doctrine\ORM\EntityManagerInterface;
 
 /**
@@ -16,26 +15,18 @@ use Doctrine\ORM\EntityManagerInterface;
  *
  * Chaque catégorisation manuelle crée ou renforce une règle. Le token
  * discriminant d'une règle est l'intersection des tokens de toutes les
- * transactions classées pareil. Une règle corrigée est dégradée : le
- * système ne s'entête pas.
+ * transactions classées pareil — tokens génériques exclus (ville, mot-outil,
+ * cf. GenericTokenDetector). Une règle corrigée est dégradée : le système ne
+ * s'entête pas.
+ *
+ * Quand un libellé n'a aucun token discriminant, la règle ne porte pas de
+ * token : elle ne matche qu'à l'empreinte exacte.
  */
 class RuleLearner
 {
-    /**
-     * Mots-outils français : jamais discriminants, quelle que soit leur
-     * fréquence.
-     */
-    private const array STOPWORDS = ['DE', 'LE', 'LA', 'LES', 'DU', 'DES', 'ET', 'EN', 'AU', 'AUX', 'SUR', 'CHEZ'];
-
-    /**
-     * Au-delà de cette part du corpus, un token (nom de ville…) ne
-     * discrimine plus rien.
-     */
-    private const float MAX_TOKEN_FREQUENCY = 0.04;
-
     public function __construct(
         private readonly CategorizationRuleRepository $ruleRepository,
-        private readonly TransactionRepository $transactionRepository,
+        private readonly TokenSelectivity $tokenSelectivity,
         private readonly EntityManagerInterface $entityManager,
     ) {
     }
@@ -53,9 +44,10 @@ class RuleLearner
         }
 
         $label = $this->labelFromTransaction($transaction);
+        $generic = $this->tokenSelectivity->genericTokens();
 
-        $rule = $this->findReinforcableRule($transaction, $category, $label)
-            ?? $this->createRule($transaction, $category, $label);
+        $rule = $this->findReinforcableRule($transaction, $category, $label, $generic)
+            ?? $this->createRule($transaction, $category, $label, $generic);
 
         $rule->addFingerprint($label->getFingerprint());
         $rule->recordConfirmation();
@@ -69,9 +61,10 @@ class RuleLearner
     /**
      * L'utilisateur valide la suggestion pré-remplie : la règle est
      * renforcée et mémorise cette empreinte. Retourne la règle effectivement
-     * créditée : si les tokens de la transaction n'ont RIEN en commun avec
-     * ceux de la règle (match fuzzy ou par périodicité sur une contrepartie
-     * différente), on ne pollue pas la règle — on apprend séparément.
+     * créditée : si les tokens de la transaction n'ont RIEN de discriminant
+     * en commun avec ceux de la règle (match fuzzy, par périodicité, ou règle
+     * réduite à ses empreintes), on ne pollue pas la règle — on apprend
+     * séparément.
      */
     public function confirmSuggestion(Transaction $transaction): ?CategorizationRule
     {
@@ -81,12 +74,13 @@ class RuleLearner
         }
 
         $label = $this->labelFromTransaction($transaction);
+        $generic = $this->tokenSelectivity->genericTokens();
 
-        if ($rule->getTokens() !== [] && array_intersect($rule->getTokens(), $label->tokens) === []) {
+        if ($this->discriminantIntersection($rule->getTokens(), $label->tokens, $generic) === []) {
             return $this->learnFromCategorization($transaction, $rule->getCategory());
         }
 
-        $this->narrowTokens($rule, $label);
+        $this->narrowTokens($rule, $label, $generic);
         $rule->addFingerprint($label->getFingerprint());
         $rule->recordConfirmation();
         $this->learnNature($rule, $transaction);
@@ -96,38 +90,56 @@ class RuleLearner
         return $rule;
     }
 
-    private function findReinforcableRule(Transaction $transaction, Category $category, NormalizedLabel $label): ?CategorizationRule
+    /**
+     * @param list<string> $generic
+     */
+    private function findReinforcableRule(Transaction $transaction, Category $category, NormalizedLabel $label, array $generic): ?CategorizationRule
     {
         $rules = $this->ruleRepository->findByCategoryAndDirection($category, $transaction->getDirection());
+        $fingerprint = $label->getFingerprint();
 
         $best = null;
         $bestSize = 0;
+        $exact = null;
         foreach ($rules as $rule) {
             if ($rule->getAmountCents() !== null && $rule->getAmountCents() !== $transaction->getAmountCents()) {
                 continue;
             }
-            $intersection = array_values(array_intersect($rule->getTokens(), $label->tokens));
-            if (\count($intersection) > $bestSize) {
+            if ($exact === null && \in_array($fingerprint, $rule->getFingerprints(), true)) {
+                $exact = $rule;
+            }
+            $size = \count($this->discriminantIntersection($rule->getTokens(), $label->tokens, $generic));
+            if ($size > $bestSize) {
                 $best = $rule;
-                $bestSize = \count($intersection);
+                $bestSize = $size;
             }
         }
 
         if ($best !== null) {
-            $this->narrowTokens($best, $label);
+            $this->narrowTokens($best, $label, $generic);
+
+            return $best;
         }
 
-        return $best;
+        // Aucune règle à token commun : une règle « empreintes seules » n'est
+        // renforcée que si le libellé n'a lui-même rien de discriminant —
+        // sinon on préfère créer une vraie règle.
+        return TokenSelectivity::discriminant($label->tokens, $generic) === [] ? $exact : null;
     }
 
-    private function createRule(Transaction $transaction, Category $category, NormalizedLabel $label): CategorizationRule
+    /**
+     * @param list<string> $generic
+     */
+    private function createRule(Transaction $transaction, Category $category, NormalizedLabel $label, array $generic): CategorizationRule
     {
+        $tokens = TokenSelectivity::discriminant($label->tokens, $generic);
+
         $rule = new CategorizationRule(
-            $label->tokens !== [] ? implode(' ', $label->tokens) : $transaction->getLabel(),
+            $tokens !== [] ? implode(' ', $tokens) : $transaction->getLabel(),
             $category,
             $transaction->getDirection(),
         );
-        $rule->setTokens($label->tokens);
+        $rule->setTokens($tokens);
 
         // Cas agrégateur (PayPal) : si une règle d'une AUTRE catégorie matche
         // déjà ces tokens, la nouvelle règle est scopée par montant pour ne
@@ -161,15 +173,13 @@ class RuleLearner
      * quelque chose. Deux restos bordelais ne doivent pas dégénérer la règle
      * en [BORDEAUX] (ni pire, en [DE]) : dans ce cas la règle garde ses
      * tokens, l'empreinte exacte couvrant la nouvelle graphie.
+     *
+     * @param list<string> $generic
      */
-    private function narrowTokens(CategorizationRule $rule, NormalizedLabel $label): void
+    private function narrowTokens(CategorizationRule $rule, NormalizedLabel $label, array $generic): void
     {
-        $intersection = array_values(array_intersect($rule->getTokens(), $label->tokens));
+        $intersection = $this->discriminantIntersection($rule->getTokens(), $label->tokens, $generic);
         if ($intersection === [] || $intersection === $rule->getTokens()) {
-            return;
-        }
-
-        if (!$this->isDiscriminant($intersection)) {
             return;
         }
 
@@ -178,25 +188,15 @@ class RuleLearner
     }
 
     /**
-     * Au moins un token ni mot-outil ni ultra-fréquent dans le corpus.
+     * @param list<string> $ruleTokens
+     * @param list<string> $labelTokens
+     * @param list<string> $generic
      *
-     * @param list<string> $tokens
+     * @return list<string>
      */
-    private function isDiscriminant(array $tokens): bool
+    private function discriminantIntersection(array $ruleTokens, array $labelTokens, array $generic): array
     {
-        $total = $this->transactionRepository->countAll();
-        $threshold = max(30, (int) ($total * self::MAX_TOKEN_FREQUENCY));
-
-        foreach ($tokens as $token) {
-            if (\in_array($token, self::STOPWORDS, true)) {
-                continue;
-            }
-            if ($this->transactionRepository->countWithToken($token) <= $threshold) {
-                return true;
-            }
-        }
-
-        return false;
+        return TokenSelectivity::discriminant(array_values(array_intersect($ruleTokens, $labelTokens)), $generic);
     }
 
     /**

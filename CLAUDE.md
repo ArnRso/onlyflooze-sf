@@ -21,6 +21,9 @@ par comptage, récurrences par promotion, etc.).
 - **Database migrations**: `symfony console doctrine:migrations:migrate`
 - **Create migration**: `symfony console make:migration`
 - **Create/update the single user**: `symfony console app:user:create <email> [password]`
+- **Consolidate learned rules**: `symfony console app:rules:consolidate [--dry-run] [-v]` (tourne aussi après
+  chaque import ; à planifier périodiquement en prod)
+- **Sync prod DB to local**: `./sync-db-from-prod.sh` (hôte SSH `docker`, conteneur `onlyflooze_db`)
 
 ### Testing & Quality
 
@@ -67,6 +70,14 @@ par comptage, récurrences par promotion, etc.).
   (`Review/RuleReapplier`, déclenchée après chaque apprentissage + bouton sur la file de révision).
 - `Matching/MatchingEngine` : cascade exact → token (mot entier UNIQUEMENT, jamais de sous-chaîne) → fuzzy →
   montant+périodicité. `Matching/RuleLearner` : apprentissage/renforcement/dégradation des règles.
+- `Matching/GenericTokenDetector` (pur) + `TokenSelectivity` : tokens génériques déduits du corpus (mots-outils,
+  fréquence, dispersion en catégories, position en queue de libellé = ville/suffixe). Une règle ne repose
+  JAMAIS sur un token générique ; sans token discriminant, elle ne matche qu'à l'empreinte exacte.
+- `Matching/RuleConsolidator` : auto-amélioration périodique (après import, bouton, commande) — nettoie /
+  reconstruit / rétrograde / supprime les règles à la lumière du corpus courant, puis rejoue les suggestions
+  (`RuleReapplier` retire celles devenues orphelines). Ne touche jamais à un token posé à la main.
+- La transaction garde la trace de la suggestion au moment du tri (`suggestionAtReview`, `suggestionOutcome`,
+  `reviewedAt`) : `Review/SuggestionPrecisionProvider` en tire couverture et justesse par mois (écran Règles).
 - `Recurrence/RecurrenceDetector` (suggestions de promotion, jamais de création auto),
   `RecurrenceMatcher` (rattachement à l'import, écart de montant signalé), `RecurrenceStatusProvider`
   (états passée/à venir/en retard, reste-à-passer).

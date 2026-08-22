@@ -2,14 +2,84 @@
 
 {% block title %}Règles apprises — OnlyFlooze{% endblock %}
 
+{% macro rate(value) %}{{ value is null ? '—' : (value * 100)|round ~ ' %' }}{% endmacro %}
+
 {% block body %}
-    <h1 class="h3 mb-4">Règles apprises</h1>
+    <div class="d-flex align-items-center justify-content-between mb-4">
+        <h1 class="h3 mb-0">Règles apprises</h1>
+        <form method="post" action="{{ path('app_rules_consolidate') }}">
+            <input type="hidden" name="_token" value="{{ csrf_token('consolidate') }}">
+            <button type="submit" class="btn btn-sm btn-outline-primary" title="Retire les tokens génériques des règles, rétrograde celles qui se trompent, rejoue les suggestions">
+                Consolider les règles
+            </button>
+        </form>
+    </div>
 
     <p class="text-muted">
-        Chaque catégorisation manuelle crée ou renforce une règle. Une règle
-        s'applique automatiquement à partir de 2 confirmations ; corrigée, elle
-        retombe en suggestion.
+        Chaque catégorisation manuelle crée ou renforce une règle. Une règle ne
+        catégorise jamais toute seule : elle pré-remplit une suggestion à valider.
+        La consolidation tourne après chaque import et peut être planifiée
+        (<code>app:rules:consolidate</code>).
     </p>
+
+    <div class="row g-3 mb-4">
+        <div class="col-md-7">
+            <div class="card h-100">
+                <div class="card-header">Précision des suggestions</div>
+                <table class="table table-sm mb-0">
+                    <thead>
+                        <tr>
+                            <th class="ps-3">Mois de tri</th>
+                            <th class="text-end">Triées</th>
+                            <th class="text-end">Couverture</th>
+                            <th class="text-end">Justesse</th>
+                            <th class="text-end pe-3">Corrigées</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for month in precision.months %}
+                            <tr>
+                                <td class="ps-3">{{ month.month|date('m/Y') }}</td>
+                                <td class="text-end">{{ month.total }}</td>
+                                <td class="text-end">{{ _self.rate(month.coverageRate) }}</td>
+                                <td class="text-end">{{ _self.rate(month.precisionRate) }}</td>
+                                <td class="text-end pe-3">{{ month.corrected }}</td>
+                            </tr>
+                        {% else %}
+                            <tr><td colspan="5" class="text-center text-muted py-3">Les statistiques se construisent au fil du tri.</td></tr>
+                        {% endfor %}
+                    </tbody>
+                    {% if precision.overall.total > 0 %}
+                        <tfoot class="table-light">
+                            <tr>
+                                <th class="ps-3">Total</th>
+                                <th class="text-end">{{ precision.overall.total }}</th>
+                                <th class="text-end">{{ _self.rate(precision.overall.coverageRate) }}</th>
+                                <th class="text-end">{{ _self.rate(precision.overall.precisionRate) }}</th>
+                                <th class="text-end pe-3">{{ precision.overall.corrected }}</th>
+                            </tr>
+                        </tfoot>
+                    {% endif %}
+                </table>
+            </div>
+        </div>
+        <div class="col-md-5">
+            <div class="card h-100">
+                <div class="card-header">Tokens jugés génériques <span class="badge text-bg-secondary">{{ genericTokens|length }}</span></div>
+                <div class="card-body">
+                    <p class="small text-muted mb-2">
+                        Villes, mots-outils, suffixes : jamais retenus comme discriminants.
+                        La liste est déduite du corpus et s'affine à chaque import.
+                    </p>
+                    <div class="d-flex flex-wrap gap-1" style="max-height: 9rem; overflow-y: auto;">
+                        {% for token in genericTokens %}
+                            <span class="badge text-bg-light border">{{ token }}</span>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <div class="card">
         <table class="table table-sm table-hover align-middle mb-0">
@@ -31,6 +101,8 @@
                         <td>
                             {% for token in rule.tokens %}
                                 <span class="badge text-bg-light border">{{ token }}</span>
+                            {% else %}
+                                <span class="badge text-bg-warning" title="Aucun token discriminant : ne matche qu'à l'empreinte exacte ({{ rule.fingerprints|length }})">empreintes seules</span>
                             {% endfor %}
                         </td>
                         <td>{{ rule.direction.value == 'debit' ? 'Débit' : 'Crédit' }}</td>

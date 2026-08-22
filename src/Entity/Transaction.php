@@ -4,6 +4,7 @@ namespace App\Entity;
 
 use App\Enum\CategorySource;
 use App\Enum\Direction;
+use App\Enum\SuggestionOutcome;
 use App\Enum\TransactionNature;
 use App\Enum\TransactionType;
 use App\Repository\TransactionRepository;
@@ -70,6 +71,16 @@ class Transaction
     #[ORM\ManyToOne]
     #[ORM\JoinColumn(onDelete: 'SET NULL')]
     private ?CategorizationRule $matchedRule = null;
+
+    #[ORM\ManyToOne]
+    #[ORM\JoinColumn(onDelete: 'SET NULL')]
+    private ?Category $suggestionAtReview = null;
+
+    #[ORM\Column(nullable: true, enumType: SuggestionOutcome::class)]
+    private ?SuggestionOutcome $suggestionOutcome = null;
+
+    #[ORM\Column(nullable: true)]
+    private ?\DateTimeImmutable $reviewedAt = null;
 
     #[ORM\ManyToOne]
     #[ORM\JoinColumn(onDelete: 'SET NULL')]
@@ -243,6 +254,42 @@ class Transaction
     public function setMatchedRule(?CategorizationRule $matchedRule): static
     {
         $this->matchedRule = $matchedRule;
+
+        return $this;
+    }
+
+    public function getSuggestionAtReview(): ?Category
+    {
+        return $this->suggestionAtReview;
+    }
+
+    public function getSuggestionOutcome(): ?SuggestionOutcome
+    {
+        return $this->suggestionOutcome;
+    }
+
+    public function getReviewedAt(): ?\DateTimeImmutable
+    {
+        return $this->reviewedAt;
+    }
+
+    /**
+     * Fige ce que le moteur avait suggéré au moment où l'utilisateur tranche.
+     */
+    public function recordReviewOutcome(SuggestionOutcome $outcome): static
+    {
+        $this->suggestionAtReview = $this->suggestedCategory;
+        $this->suggestionOutcome = $outcome;
+        $this->reviewedAt = new \DateTimeImmutable();
+
+        return $this;
+    }
+
+    public function clearReviewOutcome(): static
+    {
+        $this->suggestionAtReview = null;
+        $this->suggestionOutcome = null;
+        $this->reviewedAt = null;
 
         return $this;
     }
