@@ -27,9 +27,12 @@ class TransactionCategorizer
     /**
      * Catégorisation manuelle (ou correction d'une suggestion). La règle
      * apprise est aussitôt réappliquée au stock « À trier » : les
-     * transactions similaires reçoivent leur suggestion dans la foulée.
+     * transactions similaires reçoivent leur suggestion dans la foulée —
+     * elles sont retournées pour que l'écran ne re-rende qu'elles.
+     *
+     * @return list<Transaction>
      */
-    public function categorize(Transaction $transaction, Category $category, ?TransactionNature $nature = null): void
+    public function categorize(Transaction $transaction, Category $category, ?TransactionNature $nature = null): array
     {
         $isSuggestionConfirmation = $transaction->getSuggestedCategory() !== null
             && $transaction->getSuggestedCategory() === $category
@@ -60,7 +63,7 @@ class TransactionCategorizer
 
         $this->entityManager->flush();
 
-        $this->ruleReapplier->reapply();
+        return $this->ruleReapplier->reapply();
     }
 
     /**

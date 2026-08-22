@@ -1,6 +1,16 @@
-<turbo-stream action="update" target="review-list">
-    <template>{{ include('review/_list.html.twig') }}</template>
-</turbo-stream>
+<turbo-stream action="remove" target="review-row-{{ transaction.id }}"></turbo-stream>
+
+{% for transaction in resuggested %}
+    <turbo-stream action="replace" target="review-row-{{ transaction.id }}">
+        <template>{{ include('review/_row.html.twig') }}</template>
+    </turbo-stream>
+{% endfor %}
+
+{% if toReviewCount == 0 %}
+    <turbo-stream action="update" target="review-list">
+        <template>{{ include('review/_list.html.twig', {transactions: []}) }}</template>
+    </turbo-stream>
+{% endif %}
 
 <turbo-stream action="update" target="review-count">
     <template>{{ toReviewCount }}</template>

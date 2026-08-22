@@ -151,7 +151,7 @@ class RuleReapplierTest extends KernelTestCase
         $rule = static::getContainer()->get(CategorizationRuleRepository::class)->findAll()[0];
         $rule->setTokens(['CHRONO']);
         $this->entityManager->flush();
-        self::assertSame(1, $this->reapplier->reapply());
+        self::assertCount(1, $this->reapplier->reapply());
         self::assertSame(['CARTE 04/05 CHRONO 1010 BOULIAC', 'CARTE 11/06 CHRONO 1006 LE HAILLAN'], $this->suggestedLabels());
 
         // Puis modifiée (à la main ou par consolidation) vers un token qui ne
@@ -159,7 +159,7 @@ class RuleReapplierTest extends KernelTestCase
         // reste suggéré par son empreinte.
         $rule->setTokens(['AUTRECHOSE']);
         $this->entityManager->flush();
-        self::assertSame(1, $this->reapplier->reapply());
+        self::assertCount(1, $this->reapplier->reapply());
         self::assertSame(['CARTE 04/05 CHRONO 1010 BOULIAC'], $this->suggestedLabels());
     }
 
@@ -176,7 +176,7 @@ class RuleReapplierTest extends KernelTestCase
         $transaction->setSuggestedCategory($courses);
         $this->entityManager->flush();
 
-        self::assertSame(0, $this->reapplier->reapply());
+        self::assertCount(0, $this->reapplier->reapply());
         self::assertSame($courses, $transaction->getSuggestedCategory());
     }
 
@@ -195,6 +195,6 @@ class RuleReapplierTest extends KernelTestCase
             }
         }
 
-        self::assertSame(0, $this->reapplier->reapply(), 'Rien à mettre à jour au second passage');
+        self::assertSame([], $this->reapplier->reapply(), 'Rien à mettre à jour au second passage');
     }
 }

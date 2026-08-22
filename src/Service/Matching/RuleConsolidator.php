@@ -68,7 +68,7 @@ class RuleConsolidator
         }
         $this->entityManager->flush();
 
-        $report->suggestionsUpdated = $this->ruleReapplier->reapply();
+        $report->suggestionsUpdated = \count($this->ruleReapplier->reapply());
 
         return $report;
     }
