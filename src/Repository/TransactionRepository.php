@@ -109,6 +109,50 @@ class TransactionRepository extends ServiceEntityRepository
     }
 
     /**
+     * Dernières transactions déjà catégorisées dont le libellé contient la
+     * recherche (aide au tri : « qu'ai-je déjà décidé pour CHRONO ? »).
+     *
+     * @return list<Transaction>
+     */
+    public function findClassifiedMatching(string $search, int $limit): array
+    {
+        return $this->createQueryBuilder('t')
+            ->where('t.category IS NOT NULL')
+            ->andWhere('LOWER(t.label) LIKE :search')
+            ->setParameter('search', '%'.mb_strtolower(trim($search)).'%')
+            ->orderBy('t.operationDate', 'DESC')
+            ->setMaxResults($limit)
+            ->getQuery()
+            ->getResult();
+    }
+
+    /**
+     * Répartition par catégorie des transactions catégorisées dont le
+     * libellé contient la recherche.
+     *
+     * @return list<array{category: string, count: int}>
+     */
+    public function countClassifiedByCategory(string $search): array
+    {
+        /** @var list<array{name: string, parentName: string|null, cnt: int|string}> $rows */
+        $rows = $this->createQueryBuilder('t')
+            ->select('c.name AS name, p.name AS parentName, COUNT(t.id) AS cnt')
+            ->join('t.category', 'c')
+            ->leftJoin('c.parent', 'p')
+            ->where('LOWER(t.label) LIKE :search')
+            ->setParameter('search', '%'.mb_strtolower(trim($search)).'%')
+            ->groupBy('c.id, c.name, p.name')
+            ->orderBy('cnt', 'DESC')
+            ->getQuery()
+            ->getArrayResult();
+
+        return array_map(static fn (array $row): array => [
+            'category' => ($row['parentName'] !== null ? $row['parentName'].' > ' : '').$row['name'],
+            'count' => (int) $row['cnt'],
+        ], $rows);
+    }
+
+    /**
      * Tout le stock « À trier », sans limite (réapplication des règles).
      *
      * @return list<Transaction>

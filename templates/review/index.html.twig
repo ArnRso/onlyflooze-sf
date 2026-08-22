@@ -16,6 +16,13 @@
         </div>
     </div>
 
+    <form method="get" action="{{ path('app_review_lookup') }}" data-turbo-frame="classified-lookup" class="d-flex gap-2 mb-3" role="search">
+        <input type="search" name="q" class="form-control" placeholder="Qu'ai-je déjà trié pour… (ex : chrono, tbm)" aria-label="Rechercher dans les transactions déjà triées" autocomplete="off">
+        <button type="submit" class="btn btn-outline-info">Déjà trié ?</button>
+    </form>
+
+    {{ include('review/_lookup.html.twig', {result: null}) }}
+
     {% if categories is empty %}
         <div class="alert alert-info">
             Crée d'abord quelques <a href="{{ path('app_categories') }}">catégories</a> pour pouvoir trier.

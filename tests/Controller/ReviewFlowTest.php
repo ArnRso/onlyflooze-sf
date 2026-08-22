@@ -7,6 +7,7 @@ use App\Enum\CategorySource;
 use App\Repository\CategorizationRuleRepository;
 use App\Repository\TransactionRepository;
 use App\Service\Import\TransactionImporter;
+use App\Service\Review\TransactionCategorizer;
 use App\Service\UserManager;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
@@ -63,6 +64,34 @@ class ReviewFlowTest extends WebTestCase
         $rules = static::getContainer()->get(CategorizationRuleRepository::class)->findAll();
         self::assertCount(1, $rules);
         self::assertContains('CARREFOUR', $rules[0]->getTokens());
+    }
+
+    public function testLookupShowsWhatWasAlreadyDecidedForALabel(): void
+    {
+        $courses = new Category('Courses');
+        $this->entityManager->persist($courses);
+        $this->entityManager->flush();
+
+        static::getContainer()->get(TransactionImporter::class)->import(implode("\n", [
+            '"Date operation";"Date valeur";"Libelle";"Debit";"Credit"',
+            '"09/04/2026";"09/04/2026";"CARTE 08/04 CHRONO 1010 BOULIAC";"50,00";""',
+            '"21/04/2026";"21/04/2026";"CARTE 19/04 CHRONO 006 LE HAILLAN";"54,11";""',
+        ]), 'export.csv');
+
+        // Une CHRONO triée, l'autre encore dans la file.
+        foreach ($this->transactionRepository->findAllToReview() as $transaction) {
+            if (str_contains($transaction->getLabel(), '1010')) {
+                static::getContainer()->get(TransactionCategorizer::class)->categorize($transaction, $courses);
+            }
+        }
+
+        $this->client->request('GET', '/review/lookup?q=chrono');
+        self::assertResponseIsSuccessful();
+        $content = (string) $this->client->getResponse()->getContent();
+        self::assertStringContainsString('<turbo-frame id="classified-lookup">', $content);
+        self::assertStringContainsString('CHRONO 1010 BOULIAC', $content, 'La transaction triée est listée');
+        self::assertStringNotContainsString('CHRONO 006', $content, 'Celle encore à trier ne l\'est pas');
+        self::assertStringContainsString('Courses <strong>× 1</strong>', $content);
     }
 
     public function testReapplyButton(): void
