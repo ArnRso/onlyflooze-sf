@@ -150,7 +150,7 @@ class RuleConsolidatorTest extends KernelTestCase
         self::assertSame(['LIDL'], $rule->getTokens());
         self::assertSame(['carte|LIDL CENON'], $rule->getFingerprints());
         self::assertSame(1, $report->count(RuleChangeKind::Split));
-        $split = array_values(array_filter($this->ruleRepository->findAll(), static fn (CategorizationRule $r): bool => $r !== $rule))[0];
+        $split = array_first(array_filter($this->ruleRepository->findAll(), static fn (CategorizationRule $r): bool => $r !== $rule));
         self::assertSame(['AL', 'FATH'], $split->getTokens());
         self::assertSame($courses, $split->getCategory());
         self::assertSame(['carte|AL FATH CENON'], $split->getFingerprints());

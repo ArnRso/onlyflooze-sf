@@ -21,6 +21,12 @@ php-cs-fixer: ## Check PHP code style with PHP CS Fixer
 php-cs-fixer-fix: ## Fix PHP code style with PHP CS Fixer
 	vendor/bin/php-cs-fixer fix
 
+rector: ## Check code modernization with Rector
+	vendor/bin/rector process --dry-run
+
+rector-fix: ## Apply Rector refactorings
+	vendor/bin/rector process
+
 twigcs: ## Check Twig templates with Twig-CS-Fixer
 	vendor/bin/twig-cs-fixer lint templates
 
@@ -33,9 +39,9 @@ eslint: ## Check JavaScript code with ESLint
 eslint-fix: ## Fix JavaScript code with ESLint
 	npm run lint:js:fix
 
-lint: phpstan php-cs-fixer twigcs eslint ## Run all linting tools
+lint: phpstan rector php-cs-fixer twigcs eslint ## Run all linting tools
 
-lint-fix: php-cs-fixer-fix eslint-fix ## Fix code with all fixers
+lint-fix: rector-fix php-cs-fixer-fix eslint-fix ## Fix code with all fixers
 
 quality: lint ## Alias for lint command
 

@@ -31,6 +31,7 @@ par comptage, récurrences par promotion, etc.).
   `symfony console doctrine:database:create --env=test` puis `doctrine:migrations:migrate --env=test`)
 - **Run specific test**: `vendor/bin/phpunit tests/path/to/TestFile.php`
 - **Static analysis**: `make phpstan` (niveau 8)
+- **Rector**: `make rector` / `make rector-fix` (sets PHP 8.5 + Symfony/Twig/Doctrine/PHPUnit selon les versions installées)
 - **PHP CS**: `make php-cs-fixer` / `make php-cs-fixer-fix`
 - **Twig CS**: `make twigcs` / `make twigcs-fix`
 - **ESLint**: `make eslint`

@@ -126,13 +126,7 @@ class MatchingEngine
             return false;
         }
 
-        foreach ($ruleTokens as $token) {
-            if (!\in_array($token, $labelTokens, true)) {
-                return false;
-            }
-        }
-
-        return true;
+        return array_all($ruleTokens, fn ($token) => \in_array($token, $labelTokens, true));
     }
 
     /**
@@ -146,13 +140,7 @@ class MatchingEngine
         }
 
         foreach ($ruleTokens as $ruleToken) {
-            $found = false;
-            foreach ($labelTokens as $labelToken) {
-                if ($this->tokensAreClose($ruleToken, $labelToken)) {
-                    $found = true;
-                    break;
-                }
-            }
+            $found = array_any($labelTokens, fn ($labelToken) => $this->tokensAreClose($ruleToken, $labelToken));
             if (!$found) {
                 return false;
             }
@@ -195,10 +183,8 @@ class MatchingEngine
      */
     private function pickMostSpecific(array $candidates): CategorizationRule
     {
-        usort($candidates, static function (CategorizationRule $a, CategorizationRule $b): int {
-            return [$b->getAmountCents() !== null, \count($b->getTokens()), $b->getConfirmations()]
-                <=> [$a->getAmountCents() !== null, \count($a->getTokens()), $a->getConfirmations()];
-        });
+        usort($candidates, static fn (CategorizationRule $a, CategorizationRule $b): int => [$b->getAmountCents() !== null, \count($b->getTokens()), $b->getConfirmations()]
+            <=> [$a->getAmountCents() !== null, \count($a->getTokens()), $a->getConfirmations()]);
 
         return $candidates[0];
     }

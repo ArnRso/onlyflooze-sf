@@ -2,22 +2,15 @@
 
 namespace App\Twig;
 
-use Twig\Extension\AbstractExtension;
-use Twig\TwigFilter;
+use Twig\Attribute\AsTwigFilter;
 
-class MoneyExtension extends AbstractExtension
+class MoneyExtension
 {
-    public function getFilters(): array
-    {
-        return [
-            new TwigFilter('money', $this->formatMoney(...)),
-        ];
-    }
-
     /**
      * Formate un montant en centimes : "1 234,56 €", avec espace insécable
      * fine pour les milliers et espace insécable avant le symbole.
      */
+    #[AsTwigFilter(name: 'money')]
     public function formatMoney(int $amountCents, bool $withSign = false): string
     {
         $sign = match (true) {

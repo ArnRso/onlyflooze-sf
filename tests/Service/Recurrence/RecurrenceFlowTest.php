@@ -9,12 +9,14 @@ use App\Entity\Transaction;
 use App\Enum\CategorySource;
 use App\Enum\Direction;
 use App\Enum\RecurrenceState;
+use App\Enum\TransactionType;
 use App\Repository\RecurrenceRepository;
 use App\Repository\TransactionRepository;
 use App\Service\Import\TransactionImporter;
 use App\Service\Normalization\LabelNormalizer;
 use App\Service\Recurrence\RecurrenceDetector;
 use App\Service\Recurrence\RecurrenceStatusProvider;
+use App\Service\Review\TransactionCategorizer;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 use Symfony\Component\Clock\MockClock;
@@ -107,7 +109,7 @@ class RecurrenceFlowTest extends KernelTestCase
         $this->entityManager->persist($logement);
         $this->entityManager->flush();
 
-        $categorizer = static::getContainer()->get(\App\Service\Review\TransactionCategorizer::class);
+        $categorizer = static::getContainer()->get(TransactionCategorizer::class);
 
         $this->importer->import(implode("\n", [
             '"Date operation";"Date valeur";"Libelle";"Debit";"Credit"',
@@ -443,7 +445,7 @@ class RecurrenceFlowTest extends KernelTestCase
         );
 
         self::assertCount(1, $attached, 'Seule la transaction dans la fenêtre de date est rattachée');
-        self::assertSame('VIR vers AGENCE IMMO XYZ', array_values($attached)[0]->getLabel());
+        self::assertSame('VIR vers AGENCE IMMO XYZ', array_first($attached)->getLabel());
     }
 
     public function testStatusProviderStates(): void
@@ -459,7 +461,7 @@ class RecurrenceFlowTest extends KernelTestCase
         }
 
         $operationDate = new \DateTimeImmutable('2026-07-05');
-        $transaction = new Transaction($operationDate, $operationDate, 'PRLV EDF clients particuliers', -8400, \App\Enum\TransactionType::Prelevement);
+        $transaction = new Transaction($operationDate, $operationDate, 'PRLV EDF clients particuliers', -8400, TransactionType::Prelevement);
         $transaction->setRecurrence($passed);
         $this->entityManager->persist($transaction);
 
@@ -469,7 +471,7 @@ class RecurrenceFlowTest extends KernelTestCase
         // que soit le jour où le test tourne.
         foreach ([[$upcoming, '2026-06-25', -55000], [$late, '2026-06-08', -4200]] as [$recurrence, $date, $amount]) {
             $previousDate = new \DateTimeImmutable($date);
-            $previous = new Transaction($previousDate, $previousDate, 'PRLV '.$recurrence->getName(), $amount, \App\Enum\TransactionType::Prelevement);
+            $previous = new Transaction($previousDate, $previousDate, 'PRLV '.$recurrence->getName(), $amount, TransactionType::Prelevement);
             $previous->setRecurrence($recurrence);
             $this->entityManager->persist($previous);
         }

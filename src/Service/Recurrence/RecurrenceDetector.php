@@ -107,7 +107,7 @@ class RecurrenceDetector
         foreach ($suggestion->transactions as $transaction) {
             $transaction->setRecurrence($recurrence);
             $transaction->setAmountOutOfTolerance(false);
-            $recurrence->addFingerprint((new NormalizedLabel($transaction->getType(), $transaction->getTokens()))->getFingerprint());
+            $recurrence->addFingerprint(new NormalizedLabel($transaction->getType(), $transaction->getTokens())->getFingerprint());
         }
 
         $this->entityManager->flush();
@@ -262,13 +262,7 @@ class RecurrenceDetector
      */
     private function isDismissed(RecurrenceSuggestion $suggestion, array $dismissals): bool
     {
-        foreach ($dismissals as $dismissal) {
-            if ($dismissal->covers($suggestion->direction, $suggestion->type, $suggestion->headToken, $suggestion->expectedAmountCents, self::AMOUNT_CLUSTER_TOLERANCE_PCT)) {
-                return true;
-            }
-        }
-
-        return false;
+        return array_any($dismissals, fn ($dismissal) => $dismissal->covers($suggestion->direction, $suggestion->type, $suggestion->headToken, $suggestion->expectedAmountCents, self::AMOUNT_CLUSTER_TOLERANCE_PCT));
     }
 
     /**

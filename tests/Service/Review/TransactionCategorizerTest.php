@@ -134,6 +134,6 @@ class TransactionCategorizerTest extends KernelTestCase
         self::assertEqualsWithDelta(0.75, $summary['overall']->coverageRate(), 0.001);
         self::assertEqualsWithDelta(2 / 3, $summary['overall']->precisionRate(), 0.001);
         self::assertCount(1, $summary['months']);
-        self::assertSame((new \DateTimeImmutable())->format('Y-m'), $summary['months'][0]->month);
+        self::assertSame(new \DateTimeImmutable()->format('Y-m'), $summary['months'][0]->month);
     }
 }

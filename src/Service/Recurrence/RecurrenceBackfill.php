@@ -73,7 +73,7 @@ class RecurrenceBackfill
     public function attach(Recurrence $recurrence, Transaction $transaction): void
     {
         $transaction->setRecurrence($recurrence);
-        $recurrence->addFingerprint((new NormalizedLabel($transaction->getType(), $transaction->getTokens()))->getFingerprint());
+        $recurrence->addFingerprint(new NormalizedLabel($transaction->getType(), $transaction->getTokens())->getFingerprint());
 
         if ($transaction->getCategory() === null && $recurrence->getCategory() !== null) {
             $transaction->setSuggestedCategory($transaction->getSuggestedCategory() ?? $recurrence->getCategory());

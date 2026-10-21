@@ -79,6 +79,9 @@ jobs:
       - name: Run PHPStan
         run: make phpstan
 
+      - name: Run Rector
+        run: make rector
+
       - name: Check PHP code style
         run: make php-cs-fixer
 
