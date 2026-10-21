@@ -1,7 +1,7 @@
 # =============================================================================
 # Image de base : FrankenPHP (Caddy + PHP embarqué)
 # =============================================================================
-FROM dunglas/frankenphp:1-php8.4@sha256:2340328252915130d3442c172a342b2fffc0a451bf07b79abbebd037ebd9aa66 AS base
+FROM dunglas/frankenphp:1-php8.5@sha256:ec7839c3cf2983e363d672d05d10d401c8414bc6f119f7f7e2884719530a4b08 AS base
 
 RUN install-php-extensions \
     pdo_pgsql \

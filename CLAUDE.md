@@ -111,7 +111,7 @@ par comptage, récurrences par promotion, etc.).
 
 ## Development Notes
 
-- **PHP 8.4+**, **Symfony 8.1**, attributs partout, uuid v7 (`symfony/uid`) pour toutes les entités — jamais d'id incrémental.
+- **PHP 8.5+**, **Symfony 8.1**, attributs partout, uuid v7 (`symfony/uid`) pour toutes les entités — jamais d'id incrémental.
 - **Montants toujours en centimes (int) signés** : négatif = débit.
 - **Tout doit être testable et testé** : unitaires pour la logique pure, KernelTestCase + dama (rollback auto)
   pour l'intégration DB, WebTestCase pour les écrans.
