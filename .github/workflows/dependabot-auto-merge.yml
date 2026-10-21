@@ -1,0 +1,69 @@
+name: Dependabot auto-merge
+
+# Fusionne les PR Dependabot sans risque une fois la CI passée : nouveau digest d'une image Docker
+# (tag inchangé) et mises à jour correctives Composer. Les autres attendent une revue.
+on:
+  workflow_run:
+    workflows: [ CI/CD Pipeline ]
+    types: [ completed ]
+
+permissions:
+  contents: write
+  pull-requests: write
+  actions: write
+
+jobs:
+  auto-merge:
+    name: Merge safe Dependabot updates
+    runs-on: ubuntu-latest
+    if: >-
+      github.event.workflow_run.event == 'pull_request'
+      && github.event.workflow_run.conclusion == 'success'
+      && github.event.workflow_run.actor.login == 'dependabot[bot]'
+      && startsWith(github.event.workflow_run.head_branch, 'dependabot/')
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+      BRANCH: ${{ github.event.workflow_run.head_branch }}
+      HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+
+    steps:
+      - name: Check that the update is safe
+        id: check
+        run: |
+          pr=$(gh pr list --head "$BRANCH" --author app/dependabot --state open --json number --jq '.[0].number')
+          if [ -z "$pr" ]; then
+            echo "Aucune PR ouverte pour $BRANCH."
+            exit 0
+          fi
+
+          safe=false
+          case "$BRANCH" in
+            dependabot/docker/*)
+              # Seul le digest change : les lignes FROM sont identiques une fois le @sha256 retiré.
+              from=$(gh pr diff "$pr" | grep -E '^[-+]FROM ' | sed -E 's/@sha256:[0-9a-f]+//' || true)
+              removed=$(echo "$from" | grep '^-' | cut -c2- | sort || true)
+              added=$(echo "$from" | grep '^+' | cut -c2- | sort || true)
+              if [ -n "$added" ] && [ "$removed" = "$added" ]; then safe=true; fi
+              ;;
+            dependabot/composer/*)
+              # Chaque dépendance mise à jour doit l'être en version corrective.
+              types=$(gh api "repos/$GH_REPO/commits/$HEAD_SHA" --jq '.commit.message' | grep 'update-type:' || true)
+              if [ -n "$types" ] && ! echo "$types" | grep -qv 'semver-patch'; then safe=true; fi
+              ;;
+          esac
+
+          if [ "$safe" = true ]; then
+            echo "pr=$pr" >> "$GITHUB_OUTPUT"
+          else
+            echo "PR #$pr laissée à une revue manuelle."
+          fi
+
+      - name: Merge the pull request
+        if: steps.check.outputs.pr
+        run: gh pr merge "${{ steps.check.outputs.pr }}" --squash --delete-branch --match-head-commit "$HEAD_SHA"
+
+      # Une fusion faite avec GITHUB_TOKEN ne déclenche pas le workflow sur push : on le lance explicitement.
+      - name: Build and deploy main
+        if: steps.check.outputs.pr
+        run: gh workflow run ci-cd.yml --ref main

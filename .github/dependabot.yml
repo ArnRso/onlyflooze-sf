@@ -9,9 +9,12 @@ updates:
     directory: /
     schedule:
       interval: weekly
+    # Groupes séparés : seules les PR de correctifs sont fusionnées automatiquement.
     groups:
-      composer:
-        update-types: [minor, patch]
+      composer-patch:
+        update-types: [patch]
+      composer-minor:
+        update-types: [minor]
 
   - package-ecosystem: github-actions
     directory: /
