@@ -105,6 +105,6 @@
         "symfony/maker-bundle": "^1.68",
         "symfony/stopwatch": "8.1.*",
         "symfony/web-profiler-bundle": "8.1.*",
-        "vincentlanglet/twig-cs-fixer": "^3.0"
+        "vincentlanglet/twig-cs-fixer": "^4.1"
     }
 }
